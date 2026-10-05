@@ -12,6 +12,10 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    env: {
+      VITE_SUPABASE_URL: 'https://example.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'test-anon-key',
+    },
     setupFiles: [],
     include: ['src/features/**/__tests__/*.test.{js,jsx}'],
     coverage: {
