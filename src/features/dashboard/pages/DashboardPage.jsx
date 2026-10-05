@@ -1,59 +1,24 @@
 import { useNavigate } from 'react-router-dom'
 import {
-  TrendingUp, TrendingDown, FileText,
-  ArrowUpRight, ArrowDownRight, FlaskConical, Plus
+  TrendingUp, FileText, Wallet, FlaskConical, Plus
 } from 'lucide-react'
 import { useDashboardStats, useMonthlyChart } from '@/features/invoices/hooks/useInvoices'
 import { useAuth } from '@/features/auth/context/AuthContext'
 import { useCompany } from '@/features/companies/context/CompanyContext'
 import { formatCurrency } from '@/lib/utils'
-import RevenueChart from '../components/RevenueChart'
-import RecentInvoices from '../components/RecentInvoices'
+import RevenueChart from '@/features/dashboard/components/RevenueChart'
+import MonthlyMetricCard from '@/features/dashboard/components/MonthlyMetricCard'
+import RecentInvoices from '@/features/dashboard/components/RecentInvoices'
+import { buildMonthlyMetrics, DASHBOARD_MONTHS } from '@/features/dashboard/lib/monthlyMetrics'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-// ── Bloque financiero principal ──────────────────────────────
-function FinancialBlock({ label, value, sub, icon: Icon, iconBg, iconColor, trend, trendUp, isLoading }) {
-  if (isLoading) {
-    return (
-      <div className="bg-panel rounded-2xl border border-gray-100 p-6 space-y-3">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-9 w-40" />
-        <Skeleton className="h-3 w-24" />
-      </div>
-    )
-  }
-
-  return (
-    <div className="group relative bg-panel rounded-2xl border border-gray-100 p-6 flex flex-col gap-4 transition-all hover:border-blue-500/30 hover:shadow-[0_0_24px_rgba(233,106,74,0.08)]">
-      <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="flex items-start justify-between">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-500">{label}</p>
-        <div className={cn('h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ring-1 ring-inset ring-ink/10', iconBg)}>
-          <Icon className={cn('h-5 w-5', iconColor)} />
-        </div>
-      </div>
-
-      <div>
-        <p className="money text-[32px] leading-none font-bold text-gray-900">{value}</p>
-        {sub && <p className="text-xs text-gray-500 mt-2">{sub}</p>}
-      </div>
-
-      {trend !== undefined && (
-        <div className={cn(
-          'inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full w-fit font-mono',
-          trendUp ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'
-        )}>
-          {trendUp
-            ? <ArrowUpRight className="h-3 w-3" />
-            : <ArrowDownRight className="h-3 w-3" />
-          }
-          {trend}
-        </div>
-      )}
-    </div>
-  )
+// Vista temporal para revisar el diseño de las tres tarjetas en desarrollo.
+const METRIC_CARD_PREVIEW = {
+  facturado: [220000, 680000, 410000],
+  ingresos: [170000, 145000, 365000],
+  gastos: [110000, 220000, 95000],
 }
 
 // ── Bloque de estado (contador) ──────────────────────────────
@@ -100,11 +65,22 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const { company } = useCompany()
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
-  const { data: chartData, isLoading: chartLoading } = useMonthlyChart(6)
+  const { data: chartData, isLoading: chartLoading } = useMonthlyChart(DASHBOARD_MONTHS)
 
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'Usuario'
   const now = new Date()
   const monthName = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+  const monthlyMetrics = buildMonthlyMetrics(chartData, now)
+  const isMetricPreview = import.meta.env.DEV
+  const cardMetrics = isMetricPreview
+    ? monthlyMetrics.map((month, index) => ({
+        ...month,
+        facturado: METRIC_CARD_PREVIEW.facturado[index],
+        ingresos: METRIC_CARD_PREVIEW.ingresos[index],
+        gastos: METRIC_CARD_PREVIEW.gastos[index],
+      }))
+    : monthlyMetrics
+  const currentCardMetrics = cardMetrics.at(-1)
   const resultado = stats?.resultado ?? 0
 
   return (
@@ -123,8 +99,7 @@ export default function DashboardPage() {
 
       {/* ── Hero misión control ── */}
       <div className="relative glass rounded-2xl p-6 sm:p-8 scan-frame scan-active overflow-hidden">
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
-        <div className="absolute -left-16 -bottom-24 h-56 w-56 rounded-full bg-blue-500/15 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-tl from-blue-500/20 via-blue-500/10 to-blue-500/5 dark:from-blue-500/40 dark:via-blue-500/20 dark:to-blue-500/8" />
         <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-gray-500">resumen financiero · {monthName}</p>
@@ -132,7 +107,10 @@ export default function DashboardPage() {
               Hola, <span className="aurora-text">{firstName}</span>
             </h1>
             <p className="text-sm text-gray-600 mt-1">Controlá facturación, cobros y gastos desde un solo lugar.</p>
-            <Button onClick={() => navigate('/invoices/new')} className="mt-5">
+            <Button
+              onClick={() => navigate('/invoices/new')}
+              className="mt-5 dark:from-[#185FA5] dark:to-[#185FA5] shadow-[0_4px_18px_rgba(37,99,235,0.32)] dark:shadow-[0_4px_18px_rgba(37,99,235,0.32)]"
+            >
               <Plus className="h-4 w-4" />
               Nueva factura
             </Button>
@@ -154,39 +132,38 @@ export default function DashboardPage() {
 
       {/* ── Métricas financieras ── */}
       <div>
-        <SectionLabel>Métricas del mes</SectionLabel>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <FinancialBlock
-            label="Total facturado"
-            value={statsLoading ? '—' : formatCurrency(stats?.totalFacturado || 0)}
-            sub="Facturas emitidas este mes"
+        <SectionLabel>Métricas del mes{isMetricPreview && ' · datos de prueba'}</SectionLabel>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <MonthlyMetricCard
+            title="Facturado"
+            value={isMetricPreview ? currentCardMetrics.facturado : stats?.totalFacturado ?? 0}
+            metric="facturado"
+            data={cardMetrics}
             icon={FileText}
-            iconBg="bg-blue-500/10"
-            iconColor="text-blue-400"
-            isLoading={statsLoading}
+            tone="blue"
+            isLoading={!isMetricPreview && (statsLoading || chartLoading)}
           />
-          <FinancialBlock
-            label="Dinero ingresado"
-            value={statsLoading ? '—' : formatCurrency(stats?.totalIngresado || 0)}
-            sub="Facturas cobradas"
+          <MonthlyMetricCard
+            title="Ingresos"
+            value={isMetricPreview ? currentCardMetrics.ingresos : stats?.totalIngresado ?? 0}
+            metric="ingresos"
+            data={cardMetrics}
             icon={TrendingUp}
-            iconBg="bg-emerald-500/10"
-            iconColor="text-emerald-500"
-            trend={statsLoading ? undefined : `${stats?.paid || 0} facturas cobradas`}
-            trendUp={true}
-            isLoading={statsLoading}
+            tone="green"
+            isLoading={!isMetricPreview && (statsLoading || chartLoading)}
           />
-          <FinancialBlock
-            label="Gastos del mes"
-            value={statsLoading ? '—' : formatCurrency(stats?.totalGastos || 0)}
-            sub="Pagos a proveedores"
-            icon={TrendingDown}
-            iconBg="bg-red-500/10"
-            iconColor="text-red-500"
-            trend={statsLoading ? undefined : 'Este mes'}
-            trendUp={false}
-            isLoading={statsLoading}
+          <MonthlyMetricCard
+            title="Gastos"
+            value={isMetricPreview ? currentCardMetrics.gastos : stats?.totalGastos ?? 0}
+            metric="gastos"
+            data={cardMetrics}
+            icon={Wallet}
+            tone="red"
+            isLoading={!isMetricPreview && (statsLoading || chartLoading)}
           />
+        </div>
+        <div className="mt-6">
+          <RevenueChart data={cardMetrics} isLoading={!isMetricPreview && chartLoading} />
         </div>
       </div>
 
@@ -223,17 +200,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Gráfico + Facturas recientes ── */}
+      {/* ── Facturas recientes ── */}
       <div>
-        <SectionLabel>Evolución y actividad</SectionLabel>
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <div className="lg:col-span-3">
-            <RevenueChart data={chartData} isLoading={chartLoading} />
-          </div>
-          <div className="lg:col-span-2">
-            <RecentInvoices />
-          </div>
-        </div>
+        <SectionLabel>Actividad reciente</SectionLabel>
+        <RecentInvoices />
       </div>
 
     </div>

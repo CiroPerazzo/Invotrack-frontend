@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* ── Reemplazar azul y violeta de Tailwind con la paleta de la landing ──
      Así todos los "from-blue-500 to-violet-500" del código pasan a usar
@@ -22,6 +24,7 @@
      ──────────────────────────────────────────────────────────────────── */
   --color-panel:   #ffffff;  /* superficie base: tarjetas */
   --color-panel-2: #ffffff;  /* superficie elevada: popovers, dropdowns, toasts */
+  --color-ink: #0f172a;
 }
 
 @layer base {
@@ -105,6 +108,41 @@
     /* Superficies en modo oscuro (mismos tokens que @theme) */
     --color-panel:   #0f172a;
     --color-panel-2: #1e293b;
+    --color-ink: #e2e8f0;
+
+    /* Las pantallas usan la escala gray de Tailwind para texto y superficies. */
+    --color-gray-50: #111827;
+    --color-gray-100: #1f2937;
+    --color-gray-200: #334155;
+    --color-gray-300: #475569;
+    --color-gray-400: #94a3b8;
+    --color-gray-500: #a8b8ca;
+    --color-gray-600: #bfccdb;
+    --color-gray-700: #d5deea;
+    --color-gray-800: #e5ecf4;
+    --color-gray-900: #f3f6fb;
+
+    --color-slate-100: #1f2937;
+    --color-slate-200: #334155;
+    --color-slate-400: #94a3b8;
+    --color-slate-500: #a8b8ca;
+    --color-slate-600: #bfccdb;
+    --color-slate-900: #f3f6fb;
+    --color-slate-950: #f8fafc;
+
+    --color-blue-400: #6bb5f5;
+    --color-blue-500: #378add;
+    --color-blue-600: #8bc4ff;
+    --color-blue-50: #102941;
+    --color-blue-100: #163554;
+    --color-emerald-50: #102f29;
+    --color-emerald-100: #174438;
+    --color-amber-50: #352811;
+    --color-amber-100: #493615;
+    --color-red-50: #391e24;
+    --color-red-100: #51242d;
+    --color-purple-50: #2a213b;
+    --color-purple-100: #39294d;
   }
 }
 
@@ -117,4 +155,16 @@
     color: hsl(var(--foreground));
     font-family: var(--lp-font-body);
   }
+}
+
+@layer utilities {
+  .dark .bg-white {
+    background-color: var(--color-panel);
+  }
+
+  .dark .text-blue-700 { color: #a7d0ff; }
+  .dark .text-emerald-700 { color: #86efac; }
+  .dark .text-amber-700 { color: #fcd34d; }
+  .dark .text-red-700 { color: #fca5a5; }
+  .dark .text-purple-700 { color: #d8b4fe; }
 }

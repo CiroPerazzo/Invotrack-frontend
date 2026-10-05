@@ -185,15 +185,15 @@ export function useDashboardStats() {
 /**
  * Datos del gráfico mensual de ingresos vs gastos.
  * En modo demo retorna DEMO_CHART_DATA sin llamar a Supabase.
- * @param {number} months - Cantidad de meses hacia atrás (default 6)
+ * @param {number} months - Cantidad de meses hacia atrás (default 3)
  */
-export function useMonthlyChart(months = 6) {
+export function useMonthlyChart(months = 3) {
   const { company } = useCompany()
 
   return useQuery({
     queryKey: ['monthly-chart', company?.id, months],
     queryFn: () => {
-      if (company?._isDemo) return Promise.resolve(DEMO_CHART_DATA)
+      if (company?._isDemo) return Promise.resolve(DEMO_CHART_DATA.slice(-months))
       return invoiceService.getMonthlyChart(company.id, months)
     },
     enabled: Boolean(company?.id),

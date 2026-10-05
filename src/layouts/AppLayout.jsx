@@ -80,7 +80,7 @@ export default function AppLayout() {
   const displayName = user?.user_metadata?.full_name || user?.email || 'Usuario'
 
   return (
-    <div className="fixed inset-0 flex bg-transparent overflow-hidden">
+    <div className="fixed inset-0 flex bg-gray-50 overflow-hidden">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -92,7 +92,7 @@ export default function AppLayout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-30 w-64 glass border-r border-ink/10 flex flex-col min-h-0 overflow-hidden transition-transform duration-300 lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-30 w-64 bg-panel border-r border-ink/10 flex flex-col min-h-0 overflow-hidden transition-transform duration-300 lg:static lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -191,7 +191,7 @@ export default function AppLayout() {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
         {/* Topbar */}
-        <header className="relative h-16 glass border-b border-ink/10 flex items-center px-4 gap-4 flex-shrink-0 z-10">
+        <header className="relative h-16 bg-panel border-b border-ink/10 flex items-center px-4 gap-4 flex-shrink-0 z-10">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
           <button
             className="lg:hidden text-gray-400 hover:text-gray-900"

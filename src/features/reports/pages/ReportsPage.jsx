@@ -14,18 +14,41 @@ import { formatCurrency } from '@/lib/utils'
 import { CURRENCY_SYMBOLS } from '@/lib/constants'
 import { Download } from 'lucide-react'
 
-function processMonthlyData(rawData = []) {
-  const months = {}
-  rawData.forEach((inv) => {
-    const date = new Date(inv.issue_date ?? inv.issue_date)
-    const key = date.toLocaleDateString('es-AR', { month: 'short', year: '2-digit' })
-    if (!months[key]) months[key] = { month: key, total: 0, count: 0, paid: 0, pending: 0 }
-    months[key].total += inv.total_amount || 0
-    months[key].count++
-    if (inv.status === 'paid') months[key].paid++
-    if (inv.status === 'pending') months[key].pending++
+const REPORT_MONTHS = 3
+
+function processMonthlyData(rawData = [], period = REPORT_MONTHS) {
+  const now = new Date()
+  const months = Array.from({ length: period }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - period + index + 1, 1)
+    return {
+      key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+      month: date.toLocaleDateString('es-AR', { month: 'short' }),
+      total: 0,
+      count: 0,
+      paid: 0,
+      pending: 0,
+    }
   })
-  return Object.values(months)
+  const byMonth = new Map(months.map((month) => [month.key, month]))
+
+  for (const inv of rawData ?? []) {
+    const month = byMonth.get(inv.key ?? inv.issue_date?.slice(0, 7))
+    if (!month) continue
+
+    if (inv.key) {
+      month.total += Number(inv.facturado ?? 0)
+      month.count += Number(inv.count ?? 0)
+      month.paid += Number(inv.paid ?? 0)
+      month.pending += Number(inv.pending ?? 0)
+    } else if (inv.type === 'receivable') {
+      month.total += Number(inv.total_amount ?? 0)
+      month.count++
+      if (inv.status === 'paid') month.paid++
+      if (inv.status === 'pending') month.pending++
+    }
+  }
+
+  return months
 }
 
 /**
@@ -51,13 +74,12 @@ function groupByCurrency(invoices = []) {
 }
 
 export default function ReportsPage() {
-  const [period, setPeriod] = useState('6')
   const [flowType, setFlowType] = useState('all')
   const [exporting, setExporting] = useState(false)
   const { company } = useCompany()
-  const { data: rawData } = useMonthlyChart(parseInt(period))
+  const { data: rawData } = useMonthlyChart(REPORT_MONTHS)
   const { data: allInvoices } = useInvoices({ pageSize: 500 })
-  const chartData = processMonthlyData(rawData)
+  const chartData = processMonthlyData(rawData, REPORT_MONTHS)
   const currencyGroups = groupByCurrency(allInvoices)
 
   const totalRevenue = chartData.reduce((acc, m) => acc + m.total, 0)
@@ -96,16 +118,6 @@ export default function ReportsPage() {
               <SelectItem value="payable">Cuentas a pagar</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="3">Últimos 3 meses</SelectItem>
-              <SelectItem value="6">Últimos 6 meses</SelectItem>
-              <SelectItem value="12">Último año</SelectItem>
-            </SelectContent>
-          </Select>
           <Button variant="outline" onClick={handleExport} disabled={exporting}>
             <Download className="h-4 w-4 mr-2" />
             {exporting ? 'Exportando...' : 'Exportar CSV'}
@@ -119,14 +131,14 @@ export default function ReportsPage() {
           <CardContent className="pt-6">
             <p className="text-sm text-gray-500">Ingresos totales</p>
             <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrency(totalRevenue)}</p>
-            <p className="text-xs text-gray-400 mt-1">Últimos {period} meses</p>
+            <p className="text-xs text-gray-400 mt-1">Últimos {REPORT_MONTHS} meses</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-gray-500">Facturas emitidas</p>
             <p className="text-3xl font-bold text-gray-900 mt-1">{totalInvoices}</p>
-            <p className="text-xs text-gray-400 mt-1">Últimos {period} meses</p>
+            <p className="text-xs text-gray-400 mt-1">Últimos {REPORT_MONTHS} meses</p>
           </CardContent>
         </Card>
       </div>

@@ -353,7 +353,9 @@ export const invoiceService = {
     if (!companyId) throw new Error('companyId requerido')
 
     const now      = new Date()
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+    const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    const nextMonthStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`
 
     // Fetch financial summary for current month, scoped to company
     const { data: summaries, error } = await supabase
@@ -361,6 +363,7 @@ export const invoiceService = {
       .select('*')
       .eq('company_id', companyId)
       .gte('issue_date', firstDay)
+      .lt('issue_date', nextMonthStr)
 
     if (error) throw error
 
@@ -397,19 +400,21 @@ export const invoiceService = {
    * @param {string} companyId
    * @param {number} months
    */
-  async getMonthlyChart(companyId, months = 6) {
+  async getMonthlyChart(companyId, months = 3) {
     if (!companyId) throw new Error('companyId requerido')
 
-    const from = new Date()
-    from.setMonth(from.getMonth() - months + 1)
-    from.setDate(1)
-    const fromStr = from.toISOString().split('T')[0]
+    const now = new Date()
+    const from = new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
+    const fromStr = `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, '0')}-01`
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    const nextMonthStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`
 
     const { data, error } = await supabase
       .from('invoice_financial_summary')
-      .select('issue_date, type, total_paid, total_amount')
+      .select('issue_date, type, status, total_paid, total_amount')
       .eq('company_id', companyId)
       .gte('issue_date', fromStr)
+      .lt('issue_date', nextMonthStr)
       .order('issue_date', { ascending: true })
 
     if (error) throw error

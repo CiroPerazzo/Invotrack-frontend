@@ -7,6 +7,7 @@
  * Requirements: 7.1, 7.2, 7.5, 7.7
  */
 import { useDashboardStats, useMonthlyChart } from '@/features/invoices/hooks/useInvoices'
+import { DASHBOARD_MONTHS } from '@/features/dashboard/lib/monthlyMetrics'
 
 /**
  * Retorna todos los datos necesarios para el dashboard:
@@ -23,7 +24,7 @@ import { useDashboardStats, useMonthlyChart } from '@/features/invoices/hooks/us
  *   chartLoading: boolean,
  * }}
  */
-export function useDashboard({ months = 6 } = {}) {
+export function useDashboard({ months = DASHBOARD_MONTHS } = {}) {
   const {
     data: stats,
     isLoading: statsLoading,

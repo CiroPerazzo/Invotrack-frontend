@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
-import { Loader2, User, Building2, Shield, AlertTriangle } from 'lucide-react'
+import { Loader2, User, Building2, Shield, AlertTriangle, Moon, Sun } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +21,7 @@ import {
 } from '@/features/companies/schemas/companySchemas'
 import { missingCompanyProfileFields } from '@/features/companies/lib/companyParty'
 import { useToast } from '@/components/ui/toast'
+import { useTheme } from '@/features/settings/hooks/useTheme'
 
 const ENTITY_TYPE_LABELS = {
   empresa: 'Empresa',
@@ -31,6 +32,7 @@ export default function SettingsPage() {
   const { user } = useAuth()
   const { company } = useCompany()
   const { toast } = useToast()
+  const { theme, toggleTheme } = useTheme()
   const [passwordLoading, setPasswordLoading] = useState(false)
 
   const { register: regProfile, handleSubmit: handleProfile, formState: { isSubmitting: profileSubmitting } } = useForm({
@@ -112,6 +114,20 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-gray-900 mt-1">Configuración</h1>
         <p className="text-sm text-gray-500 mt-0.5">Administrá tu cuenta y los datos de tu empresa</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Apariencia</CardTitle>
+          <CardDescription>Elegí cómo querés ver InvoTrack en este navegador.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-sm text-gray-600">Modo {theme === 'dark' ? 'oscuro' : 'claro'} activado</p>
+          <Button type="button" variant="outline" onClick={toggleTheme} aria-pressed={theme === 'dark'}>
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            Cambiar a modo {theme === 'dark' ? 'claro' : 'oscuro'}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="profile">
         <TabsList>

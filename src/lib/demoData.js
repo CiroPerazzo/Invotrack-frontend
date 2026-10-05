@@ -222,8 +222,10 @@ export const DEMO_INVOICES = [
 
 // ── KPIs calculados a partir de los datos demo ────────────────────────────────
 export const DEMO_STATS = (() => {
-  const receivable = DEMO_INVOICES.filter((i) => i.type === 'receivable')
-  const payable    = DEMO_INVOICES.filter((i) => i.type === 'payable')
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const currentInvoices = DEMO_INVOICES.filter((i) => i.fecha_emision?.startsWith(currentMonth))
+  const receivable = currentInvoices.filter((i) => i.type === 'receivable')
+  const payable    = currentInvoices.filter((i) => i.type === 'payable')
 
   const totalFacturado = receivable.reduce((acc, i) => acc + i.total_amount, 0)
   const totalIngresado = receivable
@@ -253,22 +255,25 @@ export const DEMO_STATS = (() => {
 // ── Datos del gráfico mensual (últimos 6 meses simulados) ─────────────────────
 export const DEMO_CHART_DATA = (() => {
   const months = []
+  const facturadoRatio = [0.72, 0.87, 0.78, 0.95, 0.83]
+  const ingresosRatio = [0.82, 0.74, 0.91, 0.85, 0.79]
+  const gastosRatio = [0.68, 0.88, 0.74, 0.96, 0.81]
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     const label = d.toLocaleDateString('es-AR', { month: 'short', year: '2-digit' })
-    // Simular variación realista
-    const base = 200000 + Math.sin(i) * 80000
+    const index = 5 - i
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const receivable = DEMO_INVOICES.filter((invoice) => invoice.type === 'receivable' && invoice.fecha_emision?.startsWith(key))
     months.push({
+      key,
       month: label,
-      ingresos: Math.round(base * (0.8 + Math.random() * 0.4)),
-      gastos:   Math.round(base * (0.3 + Math.random() * 0.2)),
+      facturado: i === 0 ? DEMO_STATS.totalFacturado : Math.round(DEMO_STATS.totalFacturado * facturadoRatio[index]),
+      ingresos: i === 0 ? DEMO_STATS.totalIngresado : Math.round(DEMO_STATS.totalIngresado * ingresosRatio[index]),
+      gastos: i === 0 ? DEMO_STATS.totalGastos : Math.round(DEMO_STATS.totalGastos * gastosRatio[index]),
+      count: receivable.length,
+      paid: receivable.filter((invoice) => invoice.status === 'paid').length,
+      pending: receivable.filter((invoice) => invoice.status === 'pending').length,
     })
-  }
-  // El último mes usa los datos reales de demo
-  months[5] = {
-    month: months[5].month,
-    ingresos: DEMO_STATS.totalIngresado,
-    gastos:   DEMO_STATS.totalGastos,
   }
   return months
 })()
