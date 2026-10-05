@@ -1,0 +1,170 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* ── Reemplazar azul y violeta de Tailwind con la paleta de la landing ──
+     Así todos los "from-blue-500 to-violet-500" del código pasan a usar
+     los azules corporativos de InvoTrack sin tocar cada componente.
+     ──────────────────────────────────────────────────────────────────── */
+
+  /* Azul → paleta LP (blue-500 = --lp-blue, blue-400 = --lp-navy-mid) */
+  --color-blue-400: #378ADD;   /* --lp-blue */
+  --color-blue-500: #185FA5;   /* --lp-navy-mid */
+  --color-blue-600: #042C53;   /* --lp-navy */
+
+  /* Violeta → sustituido por azul corporativo para eliminar los purpuras */
+  --color-violet-500: #185FA5; /* --lp-navy-mid  (era #8b5cf6) */
+  --color-violet-400: #378ADD; /* --lp-blue      (era #a78bfa) */
+
+  /* ── Tokens de superficie ──────────────────────────────────────────────
+     Los usan Card, SelectContent, DropdownMenu, Toast y Tabs. Sin definirlos
+     acá, Tailwind no genera ninguna regla (bg-panel-2) y los paneles flotantes
+     quedan transparentes: se ve el contenido de atrás a través de las opciones.
+     ──────────────────────────────────────────────────────────────────── */
+  --color-panel:   #ffffff;  /* superficie base: tarjetas */
+  --color-panel-2: #ffffff;  /* superficie elevada: popovers, dropdowns, toasts */
+  --color-ink: #0f172a;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 32.1 94.6% 43.7%;
+    --warning-foreground: 210 40% 98%;
+
+    /* ── Paleta de la landing (copiada de LandingPage.css / .lp-root) ────────
+       Nombres y valores exactos del diseño original. Usarlos en cualquier
+       parte de la app con var(--lp-navy), var(--lp-blue), etc.
+       ──────────────────────────────────────────────────────────────────── */
+
+    /* Azules corporativos */
+    --lp-navy:          #042C53;
+    --lp-navy-mid:      #185FA5;
+    --lp-blue:          #378ADD;
+    --lp-blue-light:    #B5D4F4;
+    --lp-blue-pale:     #E6F1FB;
+
+    /* Esmeraldas / éxito */
+    --lp-emerald:       #0F6E56;
+    --lp-emerald-light: #E1F5EE;
+    --lp-emerald-mid:   #1D9E75;
+
+    /* Escala de grises cálidos */
+    --lp-gray-900: #2C2C2A;
+    --lp-gray-700: #5F5E5A;
+    --lp-gray-400: #888780;
+    --lp-gray-100: #D3D1C7;
+    --lp-gray-50:  #F1EFE8;
+    --lp-white:    #ffffff;
+
+    /* Tipografías */
+    --lp-font-body:    'Inter', system-ui, sans-serif;
+    --lp-font-display: 'Syne', system-ui, sans-serif;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+
+    /* Superficies en modo oscuro (mismos tokens que @theme) */
+    --color-panel:   #0f172a;
+    --color-panel-2: #1e293b;
+    --color-ink: #e2e8f0;
+
+    /* Las pantallas usan la escala gray de Tailwind para texto y superficies. */
+    --color-gray-50: #111827;
+    --color-gray-100: #1f2937;
+    --color-gray-200: #334155;
+    --color-gray-300: #475569;
+    --color-gray-400: #94a3b8;
+    --color-gray-500: #a8b8ca;
+    --color-gray-600: #bfccdb;
+    --color-gray-700: #d5deea;
+    --color-gray-800: #e5ecf4;
+    --color-gray-900: #f3f6fb;
+
+    --color-slate-100: #1f2937;
+    --color-slate-200: #334155;
+    --color-slate-400: #94a3b8;
+    --color-slate-500: #a8b8ca;
+    --color-slate-600: #bfccdb;
+    --color-slate-900: #f3f6fb;
+    --color-slate-950: #f8fafc;
+
+    --color-blue-400: #6bb5f5;
+    --color-blue-500: #378add;
+    --color-blue-600: #8bc4ff;
+    --color-blue-50: #102941;
+    --color-blue-100: #163554;
+    --color-emerald-50: #102f29;
+    --color-emerald-100: #174438;
+    --color-amber-50: #352811;
+    --color-amber-100: #493615;
+    --color-red-50: #391e24;
+    --color-red-100: #51242d;
+    --color-purple-50: #2a213b;
+    --color-purple-100: #39294d;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--lp-font-body);
+  }
+}
+
+@layer utilities {
+  .dark .bg-white {
+    background-color: var(--color-panel);
+  }
+
+  .dark .text-blue-700 { color: #a7d0ff; }
+  .dark .text-emerald-700 { color: #86efac; }
+  .dark .text-amber-700 { color: #fcd34d; }
+  .dark .text-red-700 { color: #fca5a5; }
+  .dark .text-purple-700 { color: #d8b4fe; }
+}
