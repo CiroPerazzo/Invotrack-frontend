@@ -1,9 +1,8 @@
 # InvoTrack frontend
 
-Aplicación React/Vite de gestión de facturas y gastos. Este directorio es el
-futuro proyecto `invotrack-frontend`. La API Express se desarrolla y ejecuta
-desde `server/` durante la preparación local; el frontend no importa archivos
-de ese directorio.
+Aplicación React/Vite de gestión de facturas y gastos. La API Express vive en
+el repositorio independiente `Invotrack-backend`; este proyecto no importa
+archivos del backend.
 
 ## Arquitectura actual
 
@@ -35,15 +34,14 @@ Durante desarrollo, si se omite `VITE_API_URL`, `src/lib/apiClient.js`
 usa `/api/v1` y Vite redirige `/api` a `http://localhost:3001`.
 Con una API en otro origen, definí `VITE_API_URL` y habilitá ese origen en
 `CORS_ORIGIN` del backend. El backend tiene su propio `package.json`, `.env`
-y comandos; no necesita instalar este proyecto.
+y comandos.
 
 Para Google OAuth, habilitá el proveedor y agregá la URL de redirección del
 frontend en Supabase Auth. Las Edge Functions deben estar desplegadas en el
 mismo proyecto Supabase; `npm run dev` no las despliega.
 
-## Separación pendiente de Git
+## Infraestructura
 
-El contenido de `server/` será el futuro repositorio `invotrack-backend`.
-Contiene `supabase/` (schema, migraciones, configuración y Edge Functions)
-y `scripts/arca/` (utilidades de homologación). El resto de este directorio
-será `invotrack-frontend`. Todavía no se creó ni publicó ningún repositorio.
+El esquema, las migraciones, las Edge Functions y las utilidades ARCA están
+en el repositorio `Invotrack-backend`. El frontend conserva acceso directo a
+Supabase para los módulos aún no migrados a Express.

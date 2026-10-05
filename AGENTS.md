@@ -24,8 +24,8 @@ This file contains high-signal context for AI agents working in the InvoTrack re
   - `npm run test:watch` (watch mode)
   - `npm run test:coverage` (with coverage)
 - **Database**:
-- Schema definition: `server/supabase/schema.sql`
-- Migrations: `server/supabase/migrations/` (Use incremental SQL files).
+- Schema definition and migrations live in the separate `Invotrack-backend`
+  repository under `supabase/`. Use incremental SQL migrations there.
 
 ## Testing Quirks
 
