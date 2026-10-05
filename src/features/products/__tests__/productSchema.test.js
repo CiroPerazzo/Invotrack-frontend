@@ -3,11 +3,9 @@ import { productSchema } from '@/features/products/schemas/productSchemas'
 
 const product = { name: 'Motor', price: '100.50', stock: '', unit: 'un' }
 
-describe('proveedor opcional de productos', () => {
-  it('permite guardar sin seleccionar proveedor', () => {
-    expect(productSchema.parse({ ...product, provider_id: '' })).toMatchObject({
-      provider_id: null, price: 100.5, stock: 0,
-    })
+describe('proveedor obligatorio de productos', () => {
+  it.each(['', null, undefined])('rechaza productos sin proveedor: %s', (provider_id) => {
+    expect(productSchema.safeParse({ ...product, provider_id }).success).toBe(false)
   })
 
   it('conserva un proveedor seleccionado', () => {

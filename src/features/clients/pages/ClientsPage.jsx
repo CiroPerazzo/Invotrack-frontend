@@ -16,21 +16,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { clientSchema } from '@/features/clients/schemas/clientSchemas'
-import { useClients, useCreateClient, useDeleteClient } from '@/features/clients/hooks/useClients'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/features/clients/hooks/useClients'
 import { getInitials } from '@/lib/utils'
 import { COMPANY_TAX_CONDITIONS } from '@/features/companies/schemas/companySchemas'
 
 // Dialogo de creación de cliente con formulario validado por Zod.
-function ClientFormDialog({ open, onClose }) {
+function ClientFormDialog({ open, onClose, client = null, onCreated }) {
   const createClient = useCreateClient()
+  const updateClient = useUpdateClient()
   const { register, handleSubmit, control, reset, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(clientSchema),
+    defaultValues: { name: client?.name ?? '', cuit: client?.cuit ?? '', email: client?.email ?? '', phone: client?.phone ?? '', address: client?.address ?? '', tax_condition: client?.tax_condition ?? undefined, notes: client?.notes ?? '' },
   })
 
     // Crea el cliente, cierra el dialog y resetea el formulario al completar.
     const onSubmit = async (data) => {
     try {
-      await createClient.mutateAsync(data)
+      if (client) {
+        await updateClient.mutateAsync({ id: client.id, ...data })
+      } else {
+        const created = await createClient.mutateAsync(data)
+        onCreated?.(created)
+      }
       reset()
       onClose()
     } catch {
@@ -42,7 +49,7 @@ function ClientFormDialog({ open, onClose }) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nuevo cliente</DialogTitle>
+          <DialogTitle>{client ? 'Editar cliente' : 'Nuevo cliente'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
@@ -102,6 +109,7 @@ function ClientFormDialog({ open, onClose }) {
 export default function ClientsPage() {
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingClient, setEditingClient] = useState(null)
   const { data, isLoading } = useClients({ search })
   const deleteClient = useDeleteClient()
   const clients = data?.data || []
@@ -163,7 +171,7 @@ export default function ClientsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setEditingClient(client); setDialogOpen(true) }}>
                         <Edit className="h-4 w-4 mr-2" /> Editar
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -190,7 +198,7 @@ export default function ClientsPage() {
         </div>
       )}
 
-      <ClientFormDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+      {dialogOpen && <ClientFormDialog key={editingClient?.id ?? "new"} open={dialogOpen} client={editingClient} onClose={() => { setDialogOpen(false); setEditingClient(null) }} />}
     </div>
   )
 }

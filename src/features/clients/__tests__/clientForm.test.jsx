@@ -6,6 +6,7 @@ const { mutateAsync } = vi.hoisted(() => ({ mutateAsync: vi.fn() }))
 vi.mock('@/features/clients/hooks/useClients', () => ({
   useClients: () => ({ data: { data: [], count: 0 }, isLoading: false }),
   useCreateClient: () => ({ mutateAsync }),
+  useUpdateClient: () => ({ mutateAsync: vi.fn() }),
   useDeleteClient: () => ({ mutate: vi.fn() }),
 }))
 

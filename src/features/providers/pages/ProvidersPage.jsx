@@ -15,20 +15,27 @@ import { Label } from '@/components/ui/label'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { providerSchema } from '@/features/providers/schemas/providerSchemas'
-import { useProviders, useCreateProvider, useDeleteProvider } from '@/features/providers/hooks/useProviders'
+import { useProviders, useCreateProvider, useUpdateProvider, useDeleteProvider } from '@/features/providers/hooks/useProviders'
 import { getInitials } from '@/lib/utils'
 
 // Dialog de creación de proveedor con formulario básico.
-function ProviderFormDialog({ open, onClose }) {
+export function ProviderFormDialog({ open, onClose, provider = null, onCreated }) {
   const createProvider = useCreateProvider()
+  const updateProvider = useUpdateProvider()
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(providerSchema),
+    defaultValues: { name: provider?.name ?? '', cuit: provider?.cuit ?? '', email: provider?.email ?? '', phone: provider?.phone ?? '', address: provider?.address ?? '', tax_condition: provider?.tax_condition ?? undefined, notes: provider?.notes ?? '' },
   })
 
     // Crea el proveedor, cierra el dialog y resetea el formulario al completar.
     const onSubmit = async (data) => {
     try {
-      await createProvider.mutateAsync(data)
+      if (provider) {
+        await updateProvider.mutateAsync({ id: provider.id, ...data })
+      } else {
+        const created = await createProvider.mutateAsync(data)
+        onCreated?.(created)
+      }
       reset()
       onClose()
     } catch {
@@ -40,7 +47,7 @@ function ProviderFormDialog({ open, onClose }) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nuevo proveedor</DialogTitle>
+          <DialogTitle>{provider ? 'Editar proveedor' : 'Nuevo proveedor'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
@@ -82,6 +89,7 @@ function ProviderFormDialog({ open, onClose }) {
 export default function ProvidersPage() {
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingProvider, setEditingProvider] = useState(null)
   const { data, isLoading } = useProviders({ search })
   const deleteProvider = useDeleteProvider()
   const providers = data?.data || []
@@ -145,7 +153,7 @@ export default function ProvidersPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem><Edit className="h-4 w-4 mr-2" /> Editar</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setEditingProvider(provider); setDialogOpen(true) }}><Edit className="h-4 w-4 mr-2" /> Editar</DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-red-600"
                         onClick={() => deleteProvider.mutate(provider.id)}
@@ -165,7 +173,7 @@ export default function ProvidersPage() {
         </div>
       )}
 
-      <ProviderFormDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+      {dialogOpen && <ProviderFormDialog key={editingProvider?.id ?? "new"} open={dialogOpen} provider={editingProvider} onClose={() => { setDialogOpen(false); setEditingProvider(null) }} />}
     </div>
   )
 }

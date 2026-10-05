@@ -16,14 +16,19 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { productSchema } from '@/features/products/schemas/productSchemas'
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/features/products/hooks/useProducts'
+import { ProviderFormDialog } from '@/features/providers/pages/ProvidersPage'
 import { useProviders } from '@/features/providers/hooks/useProviders'
 import { formatCurrency } from '@/lib/utils'
 
 function ProductFormDialog({ open, onClose, product = null }) {
   const createProduct = useCreateProduct()
   const updateProduct = useUpdateProduct()
-  const { data: providersData } = useProviders()
-  const providers = providersData?.data || []
+  const [providerDialogOpen, setProviderDialogOpen] = useState(false)
+  const [createdProvider, setCreatedProvider] = useState(null)
+  const { data: providersData, isLoading: providersLoading, isError: providersError } = useProviders({ pageSize: 100 })
+  const listedProviders = providersData?.data || []
+  const providers = createdProvider && !listedProviders.some((p) => p.id === createdProvider.id)
+    ? [...listedProviders, createdProvider] : listedProviders
   const isEdit = !!product
 
   const defaultValues = useMemo(() =>
@@ -32,7 +37,7 @@ function ProductFormDialog({ open, onClose, product = null }) {
       : { name: '', description: '', price: '', unit: 'un', stock: '', provider_id: '' },
   [product])
 
-  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, reset, control, setValue, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(productSchema),
     defaultValues,
   })
@@ -57,6 +62,7 @@ function ProductFormDialog({ open, onClose, product = null }) {
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(open) => { if (!open) { reset(); onClose() } }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -89,7 +95,11 @@ function ProductFormDialog({ open, onClose, product = null }) {
             {errors.stock && <p className="text-xs text-red-500">{errors.stock.message}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>Proveedor</Label>
+            <Label>Proveedor *</Label>
+            {providersLoading && <p className="text-xs text-gray-500">Cargando proveedores?</p>}
+            {providersError && <p role="alert" className="text-xs text-red-500">No se pudieron cargar los proveedores.</p>}
+            {!providersLoading && !providersError && providers.length === 0 && <p className="text-xs text-gray-500">Primero cre? un proveedor para este producto.</p>}
+            <Button type="button" variant="link" onClick={() => setProviderDialogOpen(true)}>Crear proveedor</Button>
             <Controller
               name="provider_id"
               control={control}
@@ -109,11 +119,16 @@ function ProductFormDialog({ open, onClose, product = null }) {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => { reset(); onClose() }}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting}>{isEdit ? 'Actualizar' : 'Guardar'}</Button>
+            <Button type="submit" disabled={isSubmitting || providersLoading || providersError || providers.length === 0}>{isEdit ? 'Actualizar' : 'Guardar'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
+    {providerDialogOpen && <ProviderFormDialog open onClose={() => setProviderDialogOpen(false)} onCreated={(provider) => {
+      setCreatedProvider(provider)
+      setValue('provider_id', provider.id, { shouldValidate: true })
+    }} />}
+    </>
   )
 }
 

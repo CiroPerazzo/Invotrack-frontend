@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { providerService } from '../services/providerService'
+import { providerService } from '@/features/providers/services/providerService'
 import { QUERY_KEYS } from '@/lib/constants'
 import { useToast } from '@/components/ui/toast'
 import { useCompany } from '@/features/companies/context/CompanyContext'
@@ -36,6 +36,20 @@ export function useDeleteProvider() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PROVIDERS] })
       toast({ title: 'Proveedor eliminado', variant: 'success' })
+    },
+    onError: (err) => toast({ title: 'Error', description: err.message, variant: 'error' }),
+  })
+}
+
+export function useUpdateProvider() {
+  const { company } = useCompany()
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  return useMutation({
+    mutationFn: ({ id, ...data }) => providerService.update(id, data, company.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PROVIDERS] })
+      toast({ title: 'Proveedor actualizado', variant: 'success' })
     },
     onError: (err) => toast({ title: 'Error', description: err.message, variant: 'error' }),
   })
