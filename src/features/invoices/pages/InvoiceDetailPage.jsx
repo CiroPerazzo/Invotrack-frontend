@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -19,6 +20,8 @@ import { formatCurrency, formatDate, formatDateLong } from '@/lib/utils'
 import { PAYMENT_METHOD_LABELS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { getComprobanteConfig } from '@/constants/comprobanteConfig'
+import { useCompany } from '@/features/companies/context/CompanyContext'
+import { purchaseOrderService } from '@/features/purchase-orders/services/purchaseOrderService'
 
 // ── Schema de pago ────────────────────────────────────────────────────────────
 const paymentSchema = z.object({
@@ -99,8 +102,14 @@ function PaymentForm({ invoiceId, totalAmount, totalPaid }) {
 // e información fiscal. Permite marcar como pagada, editar y validar el CAE con AFIP.
 export default function InvoiceDetailPage() {
   const { id } = useParams()
+  const { company } = useCompany()
   const navigate = useNavigate()
   const { data: invoice, isLoading } = useInvoice(id)
+  const { data: linkedOrders = [] } = useQuery({
+    queryKey: ['invoice-purchase-orders', company?.id, id],
+    queryFn: () => purchaseOrderService.forInvoice(company.id, id),
+    enabled: Boolean(company?.id && id && !company?._isDemo),
+  })
   const updateStatus = useUpdateInvoiceStatus()
   const { data: payments = [], isLoading: paymentsLoading } = useInvoicePayments(id)
   const deletePayment = useDeletePayment(id)
@@ -206,6 +215,16 @@ export default function InvoiceDetailPage() {
           </Button>
         </div>
       </div>
+
+      {linkedOrders.length > 0 && <Card>
+        <CardHeader><CardTitle>Órdenes de compra incluidas</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          {linkedOrders.map((link) => <p key={link.purchase_order_id} className="text-sm text-gray-700">
+            <button className="text-blue-500 hover:underline" onClick={() => navigate('/purchase-orders')}>{link.purchase_orders?.order_number ?? link.purchase_order_id}</button>
+            {' · '}{formatCurrency(Number(link.allocated_amount))}
+          </p>)}
+        </CardContent>
+      </Card>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 

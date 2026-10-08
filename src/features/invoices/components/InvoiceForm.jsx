@@ -61,6 +61,8 @@ export default function InvoiceForm({
   providers = [],
   company = null,
   onFlowChange,
+  lockFlow = false,
+  lockedProviderId = null,
 }) {
   const navigate = useNavigate()
 
@@ -387,7 +389,7 @@ export default function InvoiceForm({
           </p>
         </CardHeader>
         <CardContent>
-          <InvoiceFlowPicker value={invoiceType} onSelect={handleFlowChange} compact />
+          {!lockFlow && <InvoiceFlowPicker value={invoiceType} onSelect={handleFlowChange} compact />}
         </CardContent>
       </Card>
 
@@ -582,6 +584,7 @@ export default function InvoiceForm({
                   </Label>
                   <Controller name="provider_id" control={control} render={({ field }) => (
                     <Select
+                      disabled={Boolean(lockedProviderId)}
                       onValueChange={(id) => { field.onChange(id); handleContactSelect('provider', id) }}
                       value={field.value ?? ''}
                     >

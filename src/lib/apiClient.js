@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { syncAuthCookie } from '@/lib/authCookie'
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/$/, '')
 
@@ -6,13 +7,14 @@ export async function apiRequest(path, { method = 'GET', body } = {}) {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession()
   if (sessionError) throw sessionError
   if (!session?.access_token) throw new Error('Iniciá sesión para continuar')
+  await syncAuthCookie(session.access_token)
 
   const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
-      Authorization: `Bearer ${session.access_token}`,
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
     },
+    credentials: 'include',
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
 

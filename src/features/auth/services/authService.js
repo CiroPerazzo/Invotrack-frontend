@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { syncAuthCookie } from '@/lib/authCookie'
 
 /**
  * ──────────────────────────────────────────────────────────────────────────────
@@ -28,6 +29,7 @@ export const authService = {
   async signIn(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+    await syncAuthCookie(data.session?.access_token)
     return data
   },
 
@@ -97,6 +99,7 @@ export const authService = {
    * AuthContext detecta el cambio via onAuthStateChange y pone user = null.
    */
   async signOut() {
+    await syncAuthCookie(null)
     const { error } = await supabase.auth.signOut()
     if (error) throw error
   },

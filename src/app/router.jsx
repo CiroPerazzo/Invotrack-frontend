@@ -78,6 +78,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/dashboard', element: withSuspense(DashboardPage) },
           { path: '/invoices', element: withSuspense(InvoicesPage) },
+          { path: '/purchase-orders', element: withSuspense(lazy(() => import('@/features/purchase-orders/pages/PurchaseOrdersPage'))) },
           { path: '/invoices/new', element: withSuspense(NewInvoicePage) },
           { path: '/invoices/:id', element: withSuspense(InvoiceDetailPage) },
           { path: '/invoices/:id/edit', element: withSuspense(NewInvoicePage) },

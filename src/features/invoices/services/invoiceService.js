@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { purchaseOrderService } from '@/features/purchase-orders/services/purchaseOrderService'
 
 /**
  * invoiceService — CRUD + analytics para facturas.
@@ -80,7 +81,22 @@ export const invoiceService = {
    * ──────────────────────────────────────────────────────────────────────────
    * @param {{ items: object[], company_id: string, ...invoiceFields }} payload
    */
-  async create({ items = [], ...invoice }) {
+  async create({ items = [], purchaseOrderAllocations, ...invoice }) {
+    if (purchaseOrderAllocations?.length) {
+      const clean = { ...invoice }
+      clean.fecha_vencimiento ||= null
+      clean.cae_vencimiento ||= null
+      clean.cae ||= null
+      delete clean.consumidor_final_anonimo
+      const rows = items.map((item) => ({
+        description: item.description ?? item.descripcion ?? '',
+        quantity: item.quantity ?? item.cantidad ?? 1,
+        unidad: item.unidad ?? item.unit ?? null,
+        unit_price: item.unit_price ?? item.precio_unitario ?? 0,
+        alicuota_iva: item.alicuota_iva ?? item.iva_rate ?? 0,
+      }))
+      return purchaseOrderService.createGroupedInvoice(invoice.company_id, clean, rows, purchaseOrderAllocations)
+    }
     // Paso 4a — Obtener usuario autenticado
     // En producción, user.id identifica al creador de la factura.
     // En desarrollo local, si no hay sesión activa se usa un id de prueba.
@@ -175,8 +191,7 @@ export const invoiceService = {
 
     // Paso 4d — Insertar los ítems de la factura en `invoice_items`
     // Cada ítem lleva el invoice_id de la cabecera y un sort_order para mantener el orden.
-    if (items.length > 0) {
-      const rows = items.map((item, idx) => ({
+    const rows = items.map((item, idx) => ({
         invoice_id:    newInvoice.id,
         sort_order:    idx,
         description:   item.description    ?? item.descripcion    ?? '',
@@ -187,6 +202,7 @@ export const invoiceService = {
         subtotal_neto: item.subtotal_neto   ?? 0,
         subtotal_iva:  item.subtotal_iva    ?? 0,
       }))
+    if (items.length > 0) {
       const { error: itemsError } = await supabase.from('invoice_items').insert(rows)
 
       if (itemsError) {
@@ -195,6 +211,10 @@ export const invoiceService = {
         await supabase.from('invoices').delete().eq('id', newInvoice.id)
         throw itemsError
       }
+
+    }
+
+    if (items.length > 0) {
 
       // ────────────────────────────────────────────────────────────────────
       // PASO 4e.2 — STOCK: Actualizar inventario según tipo de factura

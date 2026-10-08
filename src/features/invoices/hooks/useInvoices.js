@@ -91,10 +91,13 @@ export function useCreateInvoice() {
 
     // onSuccess: React Query invalida las queries de facturas y del dashboard,
     // forzando una re-fetching automática para reflejar la factura recién creada.
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES] })
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DASHBOARD_STATS] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      if (variables.purchaseOrderAllocations?.length) {
+        queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
+      }
       toast({ title: 'Factura creada', variant: 'success' })
     },
 

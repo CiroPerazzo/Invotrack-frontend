@@ -10,7 +10,7 @@ import { useCreateInvoice, useUpdateInvoice, useInvoice } from '../hooks/useInvo
 import { useCompany } from '@/features/companies/context/CompanyContext'
 import { useClients } from '@/features/clients/hooks/useClients'
 import { useProviders } from '@/features/providers/hooks/useProviders'
-import { flowFormDefaults, FLOW_PAYABLE } from '../lib/invoiceParties'
+import { flowFormDefaults, counterpartyFormFields, FLOW_PAYABLE } from '../lib/invoiceParties'
 
 // Mapea los datos normalizados del OCR al formato de defaultValues del InvoiceForm.
 // Cubre todos los campos del formulario.
@@ -126,6 +126,7 @@ export default function NewInvoicePage() {
   // mapOcrToFormValues() convierte esos datos al formato del formulario.
   const ocrData = location.state?.ocrData ?? null
   const ocrPreview = location.state?.ocrPreview ?? null
+  const purchaseOrderGroup = location.state?.purchaseOrderGroup ?? null
 
   // Paso 1b — Hooks de mutación (creación y edición)
   // useCreateInvoice y useUpdateInvoice encapsulan la llamada a Supabase y el
@@ -154,9 +155,9 @@ export default function NewInvoicePage() {
   const [flow, setFlow] = useState(undefined)
   const flowActual = isEditMode
     ? existingInvoice?.type ?? 'receivable'
-    : flow ?? (ocrData ? FLOW_PAYABLE : undefined)
+    : flow ?? (ocrData || purchaseOrderGroup ? FLOW_PAYABLE : undefined)
 
-  const mostrarPaso1 = !isEditMode && !ocrData && !flowActual
+  const mostrarPaso1 = !isEditMode && !ocrData && !purchaseOrderGroup && !flowActual
 
   // isLoading es true mientras cualquiera de las dos mutaciones está en curso;
   // se pasa al formulario para deshabilitar el botón de envío y mostrar el spinner.
@@ -173,7 +174,13 @@ export default function NewInvoicePage() {
     } else {
       // Modo creación: creamos una nueva factura.
       // El hook agrega automáticamente el company_id desde CompanyContext.
-      await createInvoice.mutateAsync(data)
+      await createInvoice.mutateAsync({
+        ...data,
+        purchaseOrderAllocations: purchaseOrderGroup?.orders.map((order) => ({
+          purchase_order_id: order.id,
+          allocated_amount: Number(order.selected_amount),
+        })),
+      })
     }
     // Al completar, volvemos al listado de facturas.
     navigate('/invoices')
@@ -230,6 +237,26 @@ export default function NewInvoicePage() {
 
     // Si vienen datos de OCR, mapearlos al formulario
     if (ocrData) return mapOcrToFormValues(ocrData, company)
+
+    if (purchaseOrderGroup) return {
+      tipo_comprobante: 'Factura B',
+      punto_de_venta: company?.default_sale_point ?? 1,
+      numero_comprobante: 1,
+      fecha_emision: new Date().toISOString().split('T')[0],
+      fecha_vencimiento: '',
+      condicion_pago: 'contado', moneda: 'ARS', tipo_cambio: 1,
+      receptor_condicion_iva: company?.tax_condition ?? 'RI',
+      neto_gravado: 0, neto_no_gravado: 0, exento: 0,
+      iva_105: 0, iva_21: 0, iva_27: 0, otros_tributos: 0,
+      total_amount: Number(purchaseOrderGroup.total_selected),
+      ...flowFormDefaults(FLOW_PAYABLE, company),
+      ...counterpartyFormFields(FLOW_PAYABLE, purchaseOrderGroup.provider),
+      provider_id: purchaseOrderGroup.provider_id,
+      items: purchaseOrderGroup.orders.map((order) => ({
+        descripcion: `Orden de compra ${order.order_number}`,
+        cantidad: 1, unidad: 'un', precio_unitario: Number(order.selected_amount), alicuota_iva: 0,
+      })),
+    }
 
     // Alta limpia: nuestra parte sale de la ficha de la empresa y la
     // contraparte arranca vacía para que se elija de la lista.
@@ -316,7 +343,7 @@ export default function NewInvoicePage() {
                 : 'Factura que emitís vos — vos sos el emisor'}
           </p>
         </div>
-        {!isEditMode && !ocrData && (
+        {!isEditMode && !ocrData && !purchaseOrderGroup && (
           <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setFlow(undefined)}>
             Cambiar tipo
           </Button>
@@ -330,6 +357,13 @@ export default function NewInvoicePage() {
             <strong>Datos pre-cargados desde OCR.</strong> Es una factura que te emitieron:
             el emisor es el proveedor y vos sos el receptor. Revisá y corregí antes de guardar.
           </span>
+        </div>
+      )}
+
+      {purchaseOrderGroup && !isEditMode && (
+        <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-500">
+          Factura agrupada para {purchaseOrderGroup.provider.name}: {purchaseOrderGroup.orders.map((order) => order.order_number).join(', ')}.
+          Los importes de las órdenes ya incluyen IVA; revisá los datos fiscales sin sumar ese impuesto dos veces. Las órdenes se vincularán al guardar.
         </div>
       )}
 
@@ -353,7 +387,9 @@ export default function NewInvoicePage() {
             clients={clients}
             providers={providers}
             company={company}
-            onFlowChange={isEditMode ? undefined : setFlow}
+            onFlowChange={isEditMode || purchaseOrderGroup ? undefined : setFlow}
+            lockFlow={Boolean(purchaseOrderGroup)}
+            lockedProviderId={purchaseOrderGroup?.provider_id}
           />
         </div>
       </div>

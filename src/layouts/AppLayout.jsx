@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, FileText, Package, Users, Truck, BarChart3,
+  LayoutDashboard, FileText, Package, Users, Truck, BarChart3, ClipboardList,
   Bell, Settings, Menu, X, LogOut, Zap, Search
 } from 'lucide-react'
 import { authService } from '@/features/auth/services/authService'
@@ -26,6 +26,7 @@ const navGroups = [
     label: 'Operaciones',
     items: [
       { to: '/invoices', icon: FileText, label: 'Facturas' },
+      { to: '/purchase-orders', icon: ClipboardList, label: 'Órdenes de compra' },
       { to: '/ocr', icon: Zap, label: 'Escanear' },
     ],
   },
