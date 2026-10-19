@@ -1,10 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import {
-  TrendingUp, FileText, Wallet, FlaskConical, Plus
+  TrendingUp, FileText, Wallet, Plus
 } from 'lucide-react'
 import { useDashboardStats, useMonthlyChart } from '@/features/invoices/hooks/useInvoices'
 import { useAuth } from '@/features/auth/context/AuthContext'
-import { useCompany } from '@/features/companies/context/CompanyContext'
 import { formatCurrency } from '@/lib/utils'
 import RevenueChart from '@/features/dashboard/components/RevenueChart'
 import MonthlyMetricCard from '@/features/dashboard/components/MonthlyMetricCard'
@@ -13,13 +12,6 @@ import { buildMonthlyMetrics, DASHBOARD_MONTHS } from '@/features/dashboard/lib/
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-
-// Vista temporal para revisar el diseño de las tres tarjetas en desarrollo.
-const METRIC_CARD_PREVIEW = {
-  facturado: [220000, 680000, 410000],
-  ingresos: [170000, 145000, 365000],
-  gastos: [110000, 220000, 95000],
-}
 
 // ── Bloque de estado (contador) ──────────────────────────────
 function StatusBlock({ label, count, amount, color, isLoading }) {
@@ -63,39 +55,26 @@ function SectionLabel({ children }) {
 export default function DashboardPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const { company } = useCompany()
-  const { data: stats, isLoading: statsLoading } = useDashboardStats()
-  const { data: chartData, isLoading: chartLoading } = useMonthlyChart(DASHBOARD_MONTHS)
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch: reloadStats } = useDashboardStats()
+  const { data: chartData, isLoading: chartLoading, error: chartError, refetch: reloadChart } = useMonthlyChart(DASHBOARD_MONTHS)
 
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'Usuario'
   const now = new Date()
   const monthName = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
   const monthlyMetrics = buildMonthlyMetrics(chartData, now)
-  const isMetricPreview = import.meta.env.DEV
-  const cardMetrics = isMetricPreview
-    ? monthlyMetrics.map((month, index) => ({
-        ...month,
-        facturado: METRIC_CARD_PREVIEW.facturado[index],
-        ingresos: METRIC_CARD_PREVIEW.ingresos[index],
-        gastos: METRIC_CARD_PREVIEW.gastos[index],
-      }))
-    : monthlyMetrics
-  const currentCardMetrics = cardMetrics.at(-1)
   const resultado = stats?.resultado ?? 0
+
+  if (statsError || chartError) {
+    return (
+      <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-6 space-y-3">
+        <p className="text-sm text-red-700">No se pudieron cargar los datos de facturación del dashboard.</p>
+        <Button variant="outline" onClick={() => { reloadStats(); reloadChart() }}>Reintentar</Button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
-
-      {/* Banner modo demo */}
-      {company?._isDemo && (
-        <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-sm text-amber-500">
-          <FlaskConical className="h-4 w-4 flex-shrink-0" />
-          <span>
-            <strong>Modo demo</strong> — Estás viendo datos de ejemplo de "Tech Solutions S.A.".
-            Para usar tus propios datos, <button className="underline font-medium" onClick={() => navigate('/onboarding')}>creá tu empresa</button>.
-          </span>
-        </div>
-      )}
 
       {/* ── Hero misión control ── */}
       <div className="relative glass rounded-2xl p-6 sm:p-8 scan-frame scan-active overflow-hidden">
@@ -132,38 +111,38 @@ export default function DashboardPage() {
 
       {/* ── Métricas financieras ── */}
       <div>
-        <SectionLabel>Métricas del mes{isMetricPreview && ' · datos de prueba'}</SectionLabel>
+        <SectionLabel>Métricas del mes</SectionLabel>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <MonthlyMetricCard
             title="Facturado"
-            value={isMetricPreview ? currentCardMetrics.facturado : stats?.totalFacturado ?? 0}
+            value={stats?.totalFacturado ?? 0}
             metric="facturado"
-            data={cardMetrics}
+            data={monthlyMetrics}
             icon={FileText}
             tone="blue"
-            isLoading={!isMetricPreview && (statsLoading || chartLoading)}
+            isLoading={statsLoading || chartLoading}
           />
           <MonthlyMetricCard
             title="Ingresos"
-            value={isMetricPreview ? currentCardMetrics.ingresos : stats?.totalIngresado ?? 0}
+            value={stats?.totalIngresado ?? 0}
             metric="ingresos"
-            data={cardMetrics}
+            data={monthlyMetrics}
             icon={TrendingUp}
             tone="green"
-            isLoading={!isMetricPreview && (statsLoading || chartLoading)}
+            isLoading={statsLoading || chartLoading}
           />
           <MonthlyMetricCard
             title="Gastos"
-            value={isMetricPreview ? currentCardMetrics.gastos : stats?.totalGastos ?? 0}
+            value={stats?.totalGastos ?? 0}
             metric="gastos"
-            data={cardMetrics}
+            data={monthlyMetrics}
             icon={Wallet}
             tone="red"
-            isLoading={!isMetricPreview && (statsLoading || chartLoading)}
+            isLoading={statsLoading || chartLoading}
           />
         </div>
         <div className="mt-6">
-          <RevenueChart data={cardMetrics} isLoading={!isMetricPreview && chartLoading} />
+          <RevenueChart data={monthlyMetrics} isLoading={chartLoading} />
         </div>
       </div>
 

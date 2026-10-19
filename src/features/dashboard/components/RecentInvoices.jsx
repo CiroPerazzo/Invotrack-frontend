@@ -9,7 +9,7 @@ import { useInvoices } from '@/features/invoices/hooks/useInvoices'
 // Muestra las últimas 5 facturas de la empresa activa con su monto, estado y fecha.
 export default function RecentInvoices() {
   const navigate = useNavigate()
-  const { data: invoices, isLoading } = useInvoices({ page: 1, pageSize: 5 })
+  const { data: invoices, isLoading, error } = useInvoices({ page: 1, pageSize: 5 })
 
   return (
     <Card>
@@ -24,6 +24,8 @@ export default function RecentInvoices() {
           <div className="p-6 space-y-3">
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
           </div>
+        ) : error ? (
+          <p role="alert" className="p-6 text-sm text-red-600">No se pudieron cargar las facturas recientes.</p>
         ) : invoices.length === 0 ? (
           <div className="p-6 text-center text-gray-400 text-sm">No hay facturas aún</div>
         ) : (
@@ -36,11 +38,11 @@ export default function RecentInvoices() {
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{inv.invoice_number}</p>
-                  <p className="text-xs text-gray-400">{inv.client?.name || inv.provider?.name || '-'}</p>
+                  <p className="text-xs text-gray-400">{inv.clients?.name || inv.providers?.name || '-'}</p>
                 </div>
                 <div className="text-right">
                   <p className="money text-sm font-semibold text-gray-900">{formatCurrency(inv.total_amount)}</p>
-                  <p className="text-xs text-gray-400">{formatDate(inv.issue_date)}</p>
+                  <p className="text-xs text-gray-400">{formatDate(inv.fecha_emision ? `${inv.fecha_emision}T00:00:00` : null)}</p>
                 </div>
                 <InvoiceStatusBadge status={inv.status} />
               </div>

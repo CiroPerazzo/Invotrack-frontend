@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { Plus, Trash2, Loader2, Globe, BadgeCheck, UserPlus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/components/ui/toast'
-import { useEmitCae } from '../hooks/useEmitCae'
+import { useEmitCae } from '@/features/invoices/hooks/useEmitCae'
 import {
   invoiceSchema,
   TAX_CONDITION_VALUES,
@@ -54,6 +54,7 @@ function Kbd({ children }) {
 }
 
 export default function InvoiceForm({
+  invoiceId,
   defaultValues,
   onSubmit,
   isLoading,
@@ -115,6 +116,14 @@ export default function InvoiceForm({
 
   const { toast } = useToast()
   const emitCae = useEmitCae()
+  const cae = watch('cae')
+  const hasCae = Boolean(String(cae ?? '').trim())
+  const caeRequestKey = `invotrack:cae:${company?.id}:${invoiceId}`
+  const [caeRequested, setCaeRequested] = useState(() => {
+    if (String(defaultValues?.cae ?? '').trim()) return true
+    try { return sessionStorage.getItem(caeRequestKey) === 'requested' } catch { return false }
+  })
+  const caeRequestedRef = useRef(caeRequested)
 
   const totals = calculateInvoiceTotals(items)
   const superaUmbral = totals.total_amount >= UMBRAL_CF_ARS
@@ -194,6 +203,7 @@ export default function InvoiceForm({
 
     onSubmit({
       ...data,
+      id: invoiceId,
       neto_gravado:  enriched.neto_gravado ?? data.neto_gravado,
       iva_105:       enriched.iva_105 ?? data.iva_105,
       iva_21:        enriched.iva_21 ?? data.iva_21,
@@ -316,6 +326,11 @@ export default function InvoiceForm({
   // Solo aplica a comprobantes que requieren CAE emitidos (flujo "cobrar").
   const handleEmitCae = async () => {
     const values = getValues()
+    if (caeRequestedRef.current || String(values.cae ?? '').trim() || emitCae.isPending || isLoading) return
+    if (!invoiceId || !company?.id) {
+      toast({ title: 'Faltan datos de la factura', description: 'Seleccioná una empresa antes de solicitar el CAE.', variant: 'error' })
+      return
+    }
 
     if (!values.emisor_cuit) {
       toast({ title: 'Falta el CUIT del emisor', description: 'Completá el CUIT del emisor antes de pedir el CAE.', variant: 'error' })
@@ -338,10 +353,15 @@ export default function InvoiceForm({
     }
 
     try {
+      // Lock synchronously: a second click must not wait for React to render.
+      // Keep the marker after failures, since ARCA may have authorized it.
+      caeRequestedRef.current = true
+      setCaeRequested(true)
+      try { sessionStorage.setItem(caeRequestKey, 'requested') } catch { /* The server also enforces the reservation. */ }
       // Auto-numeración: se envía 0 para que ARCA devuelva el próximo número
       // vía FECompUltimoAutorizado. Un número arbitrario (ej. 10) ARCA lo
       // rechaza con el error 10016 si no es el siguiente en la secuencia.
-      const invoiceParaArca = { ...values, ...enriched, numero_comprobante: 0 }
+      const invoiceParaArca = { ...values, ...enriched, id: invoiceId, company_id: company.id, numero_comprobante: 0 }
       const result = await emitCae.mutateAsync({ invoice: invoiceParaArca })
       if (result?.cae) {
         setValue('cae', result.cae)
@@ -493,16 +513,21 @@ export default function InvoiceForm({
                 type="button"
                 variant="outline"
                 className="w-full"
-                disabled={emitCae.isPending || isLoading}
+                disabled={hasCae || caeRequested || emitCae.isPending || isLoading}
                 onClick={handleEmitCae}
               >
                 {emitCae.isPending
                   ? <Loader2 className="h-4 w-4 animate-spin" />
                   : <BadgeCheck className="h-4 w-4 text-emerald-500" />}
-                {emitCae.isPending ? 'Solicitando CAE…' : 'Solicitar CAE en ARCA (homologación)'}
+                {emitCae.isPending ? 'Solicitando CAE…'
+                  : hasCae ? 'CAE obtenido'
+                  : caeRequested ? 'CAE ya solicitado'
+                  : 'Solicitar CAE en ARCA (homologación)'}
               </Button>
               <p className="text-xs text-gray-400">
-                Pide el CAE a ARCA con los datos del comprobante y completa los campos automáticamente.
+                {caeRequested && !hasCae
+                  ? 'Ya se intentó solicitar el CAE. Revisá el resultado antes de continuar; no se puede volver a solicitar.'
+                  : 'El CAE solo se puede solicitar una vez por factura.'}
               </p>
               {emitCae.isError && (
                 <p className="text-xs text-red-500">{emitCae.error.message}</p>
@@ -968,7 +993,7 @@ export default function InvoiceForm({
         <Button type="button" variant="outline" onClick={() => navigate(-1)}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading || emitCae.isPending}>
           {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
           {esEmitida ? 'Guardar factura' : 'Guardar factura recibida'}
           <Kbd>{modKey}+↵</Kbd>

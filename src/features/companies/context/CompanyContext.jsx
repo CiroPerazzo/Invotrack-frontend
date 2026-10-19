@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { companyService } from '@/features/companies/services/companyService'
 import { useAuth } from '@/features/auth/context/AuthContext'
-import { DEMO_COMPANY } from '@/lib/demoData'
 
 const CompanyContext = createContext(null)
 

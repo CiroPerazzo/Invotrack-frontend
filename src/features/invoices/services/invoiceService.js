@@ -1,6 +1,27 @@
 import { supabase } from '@/lib/supabase'
 import { purchaseOrderService } from '@/features/purchase-orders/services/purchaseOrderService'
 
+// Page through the real financial view so the API row limit cannot truncate
+// totals or charts. Ordering by the unique invoice id keeps pages stable.
+async function getFinancialRows(companyId, from, until, columns = '*') {
+  const pageSize = 1000
+  const rows = []
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from('invoice_financial_summary')
+      .select(columns)
+      .eq('company_id', companyId)
+      .gte('issue_date', from)
+      .lt('issue_date', until)
+      .not('status', 'in', '(draft,cancelled)')
+      .order('invoice_id', { ascending: true })
+      .range(offset, offset + pageSize - 1)
+    if (error) throw error
+    rows.push(...(data ?? []))
+    if (!data || data.length < pageSize) return rows
+  }
+}
+
 /**
  * invoiceService — CRUD + analytics para facturas.
  *
@@ -44,8 +65,10 @@ export const invoiceService = {
   /**
    * Get a single invoice with its items and payments.
    * @param {string} id
+   * @param {string} companyId
    */
-  async getById(id) {
+  async getById(id, companyId) {
+    if (!companyId) throw new Error('companyId requerido')
     const { data, error } = await supabase
       .from('invoices')
       .select(`
@@ -56,6 +79,7 @@ export const invoiceService = {
         invoice_payments(*)
       `)
       .eq('id', id)
+      .eq('company_id', companyId)
       .single()
 
     if (error) throw error
@@ -378,14 +402,7 @@ export const invoiceService = {
     const nextMonthStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`
 
     // Fetch financial summary for current month, scoped to company
-    const { data: summaries, error } = await supabase
-      .from('invoice_financial_summary')
-      .select('*')
-      .eq('company_id', companyId)
-      .gte('issue_date', firstDay)
-      .lt('issue_date', nextMonthStr)
-
-    if (error) throw error
+    const summaries = await getFinancialRows(companyId, firstDay, nextMonthStr)
 
     const receivable = summaries?.filter((s) => s.type === 'receivable') ?? []
     const payable    = summaries?.filter((s) => s.type === 'payable')    ?? []
@@ -429,15 +446,7 @@ export const invoiceService = {
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
     const nextMonthStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`
 
-    const { data, error } = await supabase
-      .from('invoice_financial_summary')
-      .select('issue_date, type, status, total_paid, total_amount')
-      .eq('company_id', companyId)
-      .gte('issue_date', fromStr)
-      .lt('issue_date', nextMonthStr)
-      .order('issue_date', { ascending: true })
-
-    if (error) throw error
-    return data ?? []
+    return getFinancialRows(companyId, fromStr, nextMonthStr,
+      'issue_date, type, status, total_paid, total_amount')
   },
 }

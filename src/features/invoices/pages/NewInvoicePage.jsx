@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ScanLine } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import ZoomPanImageViewer from '@/components/ZoomPanImageViewer'
-import InvoiceForm from '../components/InvoiceForm'
+import InvoiceForm from '@/features/invoices/components/InvoiceForm'
 import InvoiceFlowPicker from '../components/InvoiceFlowPicker'
 import { useCreateInvoice, useUpdateInvoice, useInvoice } from '../hooks/useInvoices'
 import { useCompany } from '@/features/companies/context/CompanyContext'
@@ -120,6 +120,21 @@ export default function NewInvoicePage() {
   const location = useLocation()
   const { id } = useParams()
   const isEditMode = Boolean(id)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [draftId] = useState(() => {
+    const draft = searchParams.get('draft')
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(draft ?? '')
+      ? draft : crypto.randomUUID()
+  })
+  useEffect(() => {
+    if (!isEditMode && searchParams.get('draft') !== draftId) {
+      setSearchParams((params) => {
+        const next = new URLSearchParams(params)
+        next.set('draft', draftId)
+        return next
+      }, { replace: true, state: location.state })
+    }
+  }, [draftId, isEditMode, searchParams, setSearchParams, location.state])
 
   // Paso 1a — Datos pre-cargados desde OCR
   // Si el usuario escaneó una factura, llega aquí con ocrData en el navigation state.
@@ -381,6 +396,8 @@ export default function NewInvoicePage() {
 
         <div className={hasOcrPreview ? 'min-w-0' : undefined}>
           <InvoiceForm
+            key={`${company?.id}:${id ?? draftId}`}
+            invoiceId={id ?? draftId}
             defaultValues={getDefaultValues()}
             onSubmit={handleSubmit}
             isLoading={isLoading}

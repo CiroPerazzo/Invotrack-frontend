@@ -124,6 +124,7 @@ export const QUERY_KEYS = {
   COMPANIES: 'companies',
   COMPANY: 'company',
   DASHBOARD_STATS: 'dashboard-stats',
+  MONTHLY_CHART: 'monthly-chart',
   ALERTS: 'alerts',
   CATEGORIES: 'categories',
   PRODUCTS: 'products',

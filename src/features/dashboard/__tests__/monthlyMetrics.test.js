@@ -24,4 +24,14 @@ describe('métricas mensuales del dashboard', () => {
     expect(getMonthlyChange(0, 100)).toBe(-100)
     expect(getMonthlyChange(112, 100)).toBe(12)
   })
+
+  it('no incluye borradores, facturas canceladas ni totales de demostración', () => {
+    const rows = [
+      { issue_date: '2026-02-01', status: 'draft', type: 'receivable', total_amount: 1000, total_paid: 1000 },
+      { issue_date: '2026-02-01', status: 'cancelled', type: 'payable', total_amount: 500, total_paid: 500 },
+      { key: '2026-02', facturado: 9000, ingresos: 9000, gastos: 9000 },
+      { issue_date: '2026-02-02', status: 'pending', type: 'receivable', total_amount: 100, total_paid: 20 },
+    ]
+    expect(buildMonthlyMetrics(rows, new Date(2026, 1, 15)).at(-1)).toMatchObject({ facturado: 100, ingresos: 20, gastos: 0 })
+  })
 })

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { invoicePaymentService } from '../services/invoicePaymentService'
+import { invoicePaymentService } from '@/features/invoices/services/invoicePaymentService'
 import { useCompany } from '@/features/companies/context/CompanyContext'
 import { QUERY_KEYS } from '@/lib/constants'
 import { useToast } from '@/components/ui/toast'
@@ -49,6 +49,7 @@ export function useRegisterPayment(invoiceId) {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICE, invoiceId] })
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES] })
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DASHBOARD_STATS] })
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MONTHLY_CHART] })
       toast({ title: 'Pago registrado', variant: 'success' })
     },
     onError: (err) => {
@@ -72,6 +73,8 @@ export function useDeletePayment(invoiceId) {
       queryClient.invalidateQueries({ queryKey: ['invoice_financial_summary', invoiceId] })
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICE, invoiceId] })
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES] })
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DASHBOARD_STATS] })
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MONTHLY_CHART] })
       toast({ title: 'Pago eliminado', variant: 'success' })
     },
     onError: (err) => {

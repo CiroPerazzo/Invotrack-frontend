@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { afipService } from '../services/afipService'
+import { afipService } from '@/features/invoices/services/afipService'
 import { useToast } from '@/components/ui/toast'
 
 /**
@@ -15,8 +15,9 @@ export function useEmitCae() {
 
   return useMutation({
     mutationFn: ({ invoice, action = 'cae' }) => afipService.emitCae({ invoice, action }),
+    retry: false,
     onError: (err) => {
-      toast({ title: 'ARCA rechazó el comprobante', description: err.message, variant: 'error' })
+      toast({ title: 'No se pudo obtener el CAE', description: err.message, variant: 'error' })
     },
   })
 }

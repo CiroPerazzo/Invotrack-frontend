@@ -25,16 +25,12 @@ export function buildMonthlyMetrics(rows = [], today = new Date(), count = DASHB
   const byMonth = new Map(months.map((month) => [month.key, month]))
 
   for (const row of rows ?? []) {
-    const key = row.key ?? row.issue_date?.slice(0, 7)
+    if (['cancelled', 'draft'].includes(row.status)) continue
+    const key = row.issue_date?.slice(0, 7)
     const month = byMonth.get(key)
     if (!month) continue
 
-    // El modo demo ya trae los totales agrupados; Supabase devuelve una fila por factura.
-    if (row.key) {
-      month.facturado += amount(row.facturado)
-      month.ingresos += amount(row.ingresos)
-      month.gastos += amount(row.gastos)
-    } else if (row.type === 'receivable') {
+    if (row.type === 'receivable') {
       month.facturado += amount(row.total_amount)
       month.ingresos += amount(row.total_paid)
     } else if (row.type === 'payable') {
