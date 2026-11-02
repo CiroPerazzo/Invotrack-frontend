@@ -32,9 +32,9 @@ export function buildMonthlyMetrics(rows = [], today = new Date(), count = DASHB
 
     if (row.type === 'receivable') {
       month.facturado += amount(row.total_amount)
-      month.ingresos += amount(row.total_paid)
+      month.ingresos += amount(row.total_amount)
     } else if (row.type === 'payable') {
-      month.gastos += amount(row.total_paid)
+      month.gastos += amount(row.total_amount)
     }
   }
 

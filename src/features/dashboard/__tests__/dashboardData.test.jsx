@@ -24,7 +24,7 @@ const page = () => render(<MemoryRouter><DashboardPage /></MemoryRouter>)
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date(2026, 9, 19, 12))
-  Object.assign(stats, { data: { totalFacturado: 321, totalIngresado: 123, totalGastos: 43, resultado: 80 }, isLoading: false, error: null, refetch: vi.fn() })
+  Object.assign(stats, { data: { totalFacturado: 321, totalIngresos: 321, totalIngresado: 123, totalGastos: 43, resultado: 80 }, isLoading: false, error: null, refetch: vi.fn() })
   Object.assign(chart, { data: [
     { issue_date: '2026-09-04', type: 'receivable', total_amount: 200, total_paid: 100 },
     { issue_date: '2026-10-04', type: 'receivable', total_amount: 321, total_paid: 123 },
@@ -37,12 +37,12 @@ describe('dashboard conectado con facturación', () => {
   it('muestra los importes consultados también en desarrollo, sin sustituirlos por valores de prueba', () => {
     page()
     expect(point('Facturado').value).toBe(321)
-    expect(point('Ingresos').value).toBe(123)
+    expect(point('Ingresos').value).toBe(321)
     expect(point('Gastos').value).toBe(43)
     expect(point('chart').data).toEqual(point('Facturado').data)
     expect(point('chart').data[0]).toMatchObject({ facturado: 0, ingresos: 0, gastos: 0 })
-    expect(point('chart').data[1]).toMatchObject({ facturado: 200, ingresos: 100, gastos: 0 })
-    expect(point('chart').data[2]).toMatchObject({ facturado: 321, ingresos: 123, gastos: 43 })
+    expect(point('chart').data[1]).toMatchObject({ facturado: 200, ingresos: 200, gastos: 0 })
+    expect(point('chart').data[2]).toMatchObject({ facturado: 321, ingresos: 321, gastos: 43 })
     expect(screen.queryByText(/datos de prueba|modo demo/i)).toBeNull()
   })
 

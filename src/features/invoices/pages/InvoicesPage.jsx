@@ -6,8 +6,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import InvoiceTable from '../components/InvoiceTable'
-import { useInvoices } from '../hooks/useInvoices'
+import InvoiceTable from '@/features/invoices/components/InvoiceTable'
+import { useInvoices } from '@/features/invoices/hooks/useInvoices'
+import { useCompany } from '@/features/companies/context/CompanyContext'
+import { useBatchEmitCae } from '@/features/invoices/hooks/useBatchEmitCae'
+import { emissionBlockReason, MAX_BATCH_INVOICES } from '@/features/invoices/services/batchEmissionService'
 
 /**
  * Página de listado de facturas.
@@ -18,8 +21,38 @@ import { useInvoices } from '../hooks/useInvoices'
 // Página de listado de facturas con filtros (estado, tipo, fecha, búsqueda),
 // paginación server-side y persistencia de filtros en URL params.
 export default function InvoicesPage() {
+  const { company } = useCompany()
+  return <CompanyInvoices key={company?.id ?? 'none'} companyId={company?.id} />
+}
+
+function CompanyInvoices({ companyId }) {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [selectedInvoices, setSelectedInvoices] = useState([])
+  const selectedIds = selectedInvoices.map((invoice) => invoice.id)
+  const sendableInvoices = selectedInvoices.filter((invoice) => !emissionBlockReason(invoice, companyId))
+  const excludedInvoices = selectedInvoices.filter((invoice) => emissionBlockReason(invoice, companyId))
+  const [results, setResults] = useState([])
+  const [batchSize, setBatchSize] = useState(0)
+  const sendingRef = useRef(false)
+  const emission = useBatchEmitCae(companyId, setResults)
+
+  const toggleInvoice = (invoice) => {
+    setSelectedInvoices((selected) => selected.some((entry) => entry.id === invoice.id)
+      ? selected.filter((entry) => entry.id !== invoice.id)
+      : selected.length < MAX_BATCH_INVOICES ? [...selected, invoice] : selected)
+  }
+  const sendSelected = async () => {
+    if (sendingRef.current || !sendableInvoices.length) return
+    sendingRef.current = true
+    setBatchSize(sendableInvoices.length)
+    setResults([])
+    try {
+      await emission.mutateAsync(sendableInvoices.map((invoice) => invoice.id))
+      setSelectedInvoices([])
+    } catch { /* El error se presenta debajo del botón. */ }
+    finally { sendingRef.current = false }
+  }
 
   // Leer filtros desde URL
   const urlStatus   = searchParams.get('status')   ?? ''
@@ -62,7 +95,7 @@ export default function InvoicesPage() {
 
   const pageSize = 20
 
-  const { data, count, isLoading } = useInvoices({
+  const { data, count, isLoading, error } = useInvoices({
     status:   urlStatus   || undefined,
     type:     urlType     || undefined,
     search:   urlSearch   || undefined,
@@ -73,6 +106,10 @@ export default function InvoicesPage() {
   })
 
   const totalPages = Math.max(1, Math.ceil(count / pageSize))
+  const allPageSelected = data.length > 0 && data.every((invoice) => selectedIds.includes(invoice.id))
+  const togglePage = () => setSelectedInvoices((selected) => allPageSelected
+    ? selected.filter((invoice) => !data.some((entry) => entry.id === invoice.id))
+    : [...new Map([...selected, ...data].map((invoice) => [invoice.id, invoice])).values()].slice(0, MAX_BATCH_INVOICES))
 
   // Actualiza un filtro en los URL params y resetea la paginación a página 1.
   const setFilter = (key, value) => {
@@ -207,10 +244,58 @@ export default function InvoicesPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardContent className="pt-4 space-y-3">
+          <p className="font-semibold text-gray-900">Envío de facturas a ARCA</p>
+          <p className="text-sm text-gray-500">
+            Marcá las casillas o hacé clic en las filas para seleccionar facturas.
+            Se enviarán únicamente las ventas disponibles sin CAE.
+            Podés seleccionar hasta {MAX_BATCH_INVOICES} entre distintas páginas. Mantené esta pantalla abierta durante el envío.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm">{selectedIds.length} seleccionadas</span>
+            <span className="text-sm text-gray-500">{sendableInvoices.length} listas para ARCA</span>
+            <Button onClick={sendSelected} disabled={!companyId || !sendableInvoices.length || emission.isPending}>
+              {emission.isPending ? `Enviando ${results.length} de ${batchSize}…` : 'Enviar seleccionadas a ARCA'}
+            </Button>
+            <Button variant="ghost" disabled={!selectedIds.length || emission.isPending} onClick={() => setSelectedInvoices([])}>
+              Limpiar selección
+            </Button>
+          </div>
+          {excludedInvoices.length > 0 && <div className="text-sm text-amber-700" role="note">
+            <p>Estas facturas seleccionadas quedan fuera del envío:</p>
+            <ul>
+              {excludedInvoices.map((invoice) => <li key={invoice.id}>
+                {invoice.invoice_number || invoice.id}: {emissionBlockReason(invoice, companyId)}
+              </li>)}
+            </ul>
+          </div>}
+          {emission.error && <p role="alert" className="text-sm text-red-600">{emission.error.message}</p>}
+          {results.length > 0 && <div role="status" aria-live="polite" className="space-y-2 text-sm">
+            <p>{results.filter((result) => result.status === 'issued').length} emitidas de {batchSize}</p>
+            <ul className="space-y-2">
+              {results.map((result) => <li key={result.id}>
+                <strong>{result.label}</strong>{' · '}
+                {result.status === 'issued'
+                  ? `Emitida ${result.invoiceNumber} · CAE ${result.cae}`
+                  : result.status === 'authorized_unsaved'
+                    ? `Autorizada por ARCA · CAE ${result.cae} · N° ${result.numeroComprobante ?? '-'}, pero no se pudo guardar: ${result.message}. Revisá el resultado antes de continuar.`
+                    : `No se completó: ${result.message}`}
+              </li>)}
+            </ul>
+          </div>}
+        </CardContent>
+      </Card>
+
+      {error && <p role="alert" className="text-red-600">No se pudieron cargar las facturas: {error.message}</p>}
+
       {/* Tabla */}
       <Card>
         <CardContent className="p-0">
-          <InvoiceTable invoices={data} isLoading={isLoading} />
+          <InvoiceTable invoices={data} isLoading={isLoading} companyId={companyId}
+            selectedIds={selectedIds} onToggleInvoice={toggleInvoice} onTogglePage={togglePage}
+            allPageSelected={allPageSelected} selectionDisabled={emission.isPending}
+          />
         </CardContent>
       </Card>
 

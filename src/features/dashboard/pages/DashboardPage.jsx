@@ -101,7 +101,7 @@ export default function DashboardPage() {
               {statsLoading ? '—' : formatCurrency(resultado)}
             </p>
             <div className="flex gap-5 mt-3 text-xs justify-end">
-              <span className="text-gray-500">Ingresado <strong className="text-emerald-600 money">{formatCurrency(stats?.totalIngresado || 0)}</strong></span>
+              <span className="text-gray-500">Ingresos <strong className="text-emerald-600 money">{formatCurrency(stats?.totalIngresos || 0)}</strong></span>
               <span className="text-gray-500">Gastos <strong className="text-red-600 money">{formatCurrency(stats?.totalGastos || 0)}</strong></span>
               <span className="text-gray-500">Pendiente <strong className="text-amber-700 money">{formatCurrency(stats?.totalPendiente || 0)}</strong></span>
             </div>
@@ -124,7 +124,7 @@ export default function DashboardPage() {
           />
           <MonthlyMetricCard
             title="Ingresos"
-            value={stats?.totalIngresado ?? 0}
+            value={stats?.totalIngresos ?? 0}
             metric="ingresos"
             data={monthlyMetrics}
             icon={TrendingUp}

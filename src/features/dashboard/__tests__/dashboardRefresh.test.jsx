@@ -7,6 +7,9 @@ import {
 } from '@/features/invoices/hooks/useInvoices'
 import { useRegisterPayment, useDeletePayment } from '@/features/invoices/hooks/useInvoicePayments'
 import { QUERY_KEYS } from '@/lib/constants'
+import { useBatchEmitCae } from '@/features/invoices/hooks/useBatchEmitCae'
+
+vi.mock('@/features/invoices/services/batchEmissionService', () => ({ emitInvoiceBatch: vi.fn(async () => []) }))
 
 const { context, invoices, payments } = vi.hoisted(() => ({
   context: { company: null },
@@ -43,6 +46,7 @@ describe('actualización del dashboard al cambiar la facturación', () => {
     ['eliminar factura', useDeleteInvoice, 'invoice-a'],
     ['registrar pago', useRegisterPayment, { amount: 2 }],
     ['eliminar pago', useDeletePayment, 'payment-a'],
+    ['enviar lote a ARCA', () => useBatchEmitCae('company-a', () => {}), ['invoice-a']],
   ])('%s refresca las tarjetas y el gráfico que ya estaban abiertos', async (_, useAction, payload) => {
     const { client, wrapper } = queryContext()
     client.setQueryData([QUERY_KEYS.DASHBOARD_STATS, 'company-a'], { totalFacturado: 1 })

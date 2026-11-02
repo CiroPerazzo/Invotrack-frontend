@@ -31,14 +31,25 @@ describe('consultas de facturación del dashboard', () => {
       { type: 'payable', total_amount: '700', total_paid: '300', total_pending: '400' },
     ])
     expect(await invoiceService.getDashboardStats('company-a')).toEqual({
-      totalFacturado: 1510, totalIngresado: 1235, totalGastos: 300,
-      totalPendiente: 275, resultado: 935, paid: 1, pending: 1, overdue: 1, total: 3,
+      totalFacturado: 1510, totalIngresos: 1510, totalIngresado: 1235, totalGastos: 700,
+      totalPendiente: 275, resultado: 810, paid: 1, pending: 1, overdue: 1, total: 3,
     })
     expect(from).toHaveBeenCalledWith('invoice_financial_summary')
     expect(query.eq).toHaveBeenCalledWith('company_id', 'company-a')
     expect(query.gte).toHaveBeenCalledWith('issue_date', '2026-10-01')
     expect(query.lt).toHaveBeenCalledWith('issue_date', '2026-11-01')
     expect(query.not).toHaveBeenCalledWith('status', 'in', '(draft,cancelled)')
+  })
+
+  it('incluye ingresos y egresos pendientes sin registrar pagos ficticios', async () => {
+    financialSource([
+      { type: 'receivable', total_amount: '100', total_paid: '0', total_pending: '100' },
+      { type: 'payable', total_amount: '40', total_paid: '0', total_pending: '40' },
+    ])
+    expect(await invoiceService.getDashboardStats('company-a')).toMatchObject({
+      totalIngresos: 100, totalGastos: 40, resultado: 60,
+      totalIngresado: 0, totalPendiente: 100, paid: 0,
+    })
   })
 
   it('carga todas las páginas para no truncar los importes a 1000 facturas', async () => {

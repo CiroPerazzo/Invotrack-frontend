@@ -14,7 +14,7 @@ describe('métricas mensuales del dashboard', () => {
     const result = buildMonthlyMetrics(rows, new Date(2026, 1, 15))
 
     expect(result.map((month) => month.key)).toEqual(['2025-12', '2026-01', '2026-02'])
-    expect(result[0]).toMatchObject({ facturado: 1500.5, ingresos: 500.25, gastos: 125.1 })
+    expect(result[0]).toMatchObject({ facturado: 1500.5, ingresos: 1500.5, gastos: 900 })
     expect(result[1]).toMatchObject({ facturado: 0, ingresos: 0, gastos: 0 })
     expect(result[2]).toMatchObject({ facturado: 80, ingresos: 80, gastos: 0 })
   })
@@ -32,6 +32,6 @@ describe('métricas mensuales del dashboard', () => {
       { key: '2026-02', facturado: 9000, ingresos: 9000, gastos: 9000 },
       { issue_date: '2026-02-02', status: 'pending', type: 'receivable', total_amount: 100, total_paid: 20 },
     ]
-    expect(buildMonthlyMetrics(rows, new Date(2026, 1, 15)).at(-1)).toMatchObject({ facturado: 100, ingresos: 20, gastos: 0 })
+    expect(buildMonthlyMetrics(rows, new Date(2026, 1, 15)).at(-1)).toMatchObject({ facturado: 100, ingresos: 100, gastos: 0 })
   })
 })

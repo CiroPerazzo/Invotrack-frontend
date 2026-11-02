@@ -1,5 +1,4 @@
 import { supabase } from '@/lib/supabase'
-import { purchaseOrderService } from '@/features/purchase-orders/services/purchaseOrderService'
 
 // Page through the real financial view so the API row limit cannot truncate
 // totals or charts. Ordering by the unique invoice id keeps pages stable.
@@ -105,22 +104,7 @@ export const invoiceService = {
    * ──────────────────────────────────────────────────────────────────────────
    * @param {{ items: object[], company_id: string, ...invoiceFields }} payload
    */
-  async create({ items = [], purchaseOrderAllocations, ...invoice }) {
-    if (purchaseOrderAllocations?.length) {
-      const clean = { ...invoice }
-      clean.fecha_vencimiento ||= null
-      clean.cae_vencimiento ||= null
-      clean.cae ||= null
-      delete clean.consumidor_final_anonimo
-      const rows = items.map((item) => ({
-        description: item.description ?? item.descripcion ?? '',
-        quantity: item.quantity ?? item.cantidad ?? 1,
-        unidad: item.unidad ?? item.unit ?? null,
-        unit_price: item.unit_price ?? item.precio_unitario ?? 0,
-        alicuota_iva: item.alicuota_iva ?? item.iva_rate ?? 0,
-      }))
-      return purchaseOrderService.createGroupedInvoice(invoice.company_id, clean, rows, purchaseOrderAllocations)
-    }
+  async create({ items = [], ...invoice }) {
     // Paso 4a — Obtener usuario autenticado
     // En producción, user.id identifica al creador de la factura.
     // En desarrollo local, si no hay sesión activa se usa un id de prueba.
@@ -410,8 +394,9 @@ export const invoiceService = {
     const totalFacturado = receivable.reduce((acc, s) => acc + Number(s.total_amount), 0)
     const totalIngresado = receivable.reduce((acc, s) => acc + Number(s.total_paid), 0)
     const totalPendiente = receivable.reduce((acc, s) => acc + Number(s.total_pending), 0)
-    const totalGastos    = payable.reduce((acc, s) => acc + Number(s.total_paid), 0)
-    const resultado      = totalIngresado - totalGastos
+    const totalIngresos = totalFacturado
+    const totalGastos    = payable.reduce((acc, s) => acc + Number(s.total_amount), 0)
+    const resultado      = totalIngresos - totalGastos
 
     const paid    = receivable.filter((s) => s.is_fully_paid).length
     const pending = receivable.filter((s) => !s.is_fully_paid && !s.is_overdue).length
@@ -420,6 +405,7 @@ export const invoiceService = {
 
     return {
       totalFacturado,
+      totalIngresos,
       totalIngresado,
       totalGastos,
       totalPendiente,
@@ -432,7 +418,7 @@ export const invoiceService = {
   },
 
   /**
-   * Monthly chart data — last N months of receivable vs payable collected.
+   * Monthly chart data — last N months of receivable vs payable invoiced.
    * Filtra por company_id (no por user_id).
    * @param {string} companyId
    * @param {number} months

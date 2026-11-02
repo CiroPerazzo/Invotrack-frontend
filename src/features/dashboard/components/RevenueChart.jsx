@@ -11,8 +11,8 @@ import { formatCurrency } from '@/lib/utils'
 
 const SERIES = [
   { key: 'facturado', label: 'Facturado', color: '#378ADD' },
-  { key: 'ingresos', label: 'Ingresado', color: '#1D9E75' },
-  { key: 'gastos', label: 'Gastado', color: '#E2385A' },
+  { key: 'ingresos', label: 'Ingresos', color: '#1D9E75' },
+  { key: 'gastos', label: 'Gastos', color: '#E2385A' },
 ]
 
 // El tooltip muestra solo las series visibles, con sus importes completos.
@@ -36,7 +36,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   )
 }
 
-// Compara facturación, cobros y gastos por mes de emisión.
+// Compara facturación, ingresos y gastos por mes de emisión.
 export default function RevenueChart({ data = [], isLoading }) {
   const gradientId = useId()
   const [visibleSeries, setVisibleSeries] = useState(() => SERIES.map(({ key }) => key))
@@ -67,7 +67,7 @@ export default function RevenueChart({ data = [], isLoading }) {
       <CardHeader className="gap-4">
         <div className="space-y-1.5">
           <CardTitle>Evolución mensual</CardTitle>
-          <CardDescription>Facturado, ingresado y gastado · últimos {data.length} meses por mes de emisión.</CardDescription>
+          <CardDescription>Facturado, ingresos y gastos · últimos {data.length} meses por mes de emisión.</CardDescription>
         </div>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Métricas visibles en el gráfico">
           {SERIES.map(({ key, label, color }) => {

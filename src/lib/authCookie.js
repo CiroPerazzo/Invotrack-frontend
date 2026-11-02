@@ -4,6 +4,8 @@ let syncedToken = null
 let pending = null
 
 export async function syncAuthCookie(token) {
+  
+  
   if (!token) {
     syncedToken = null
     await fetch(`${API_BASE}/auth/session`, { method: 'DELETE', credentials: 'include' })
