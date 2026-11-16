@@ -53,6 +53,13 @@ export const ocrService = {
    * @returns {Promise<{ raw: OcrRawResult, normalized: OcrNormalizedInvoice }>}
    */
   async processInvoice(file, provider = 'mock') {
+    if (!file.size || file.size > 10 * 1024 * 1024) {
+      throw new Error('El archivo debe contener datos y no superar los 10 MB.')
+    }
+    // Algunos sistemas no informan el MIME del PDF seleccionado.
+    if (!file.type && /\.pdf$/i.test(file.name)) {
+      file = new File([file], file.name, { type: 'application/pdf' })
+    }
     // Validar tipo de archivo (Req 6.9)
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       throw new Error(
@@ -79,6 +86,8 @@ export const ocrService = {
       raw,
       normalized: {
         ...normalized,
+        ocr_provider: provider,
+        raw_text: raw.rawText,
         confidence: clampedConfidence,
       },
     }

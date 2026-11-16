@@ -20,6 +20,7 @@ vi.mock('@/features/invoices/hooks/useBatchEmitCae', () => ({
 
 const invoice = (id, fields = {}) => ({
   id, company_id: 'company-a', invoice_number: id, type: 'receivable',
+  client_id: 'client-a',
   tipo_comprobante: 'Factura B', status: 'pending', total_amount: 121, ...fields,
 })
 const page = () => <MemoryRouter><InvoicesPage /></MemoryRouter>

@@ -41,7 +41,7 @@ const EMPTY = {
  * @param {Function} props.onOpenChange
  * @param {Function} props.onCreated — recibe el registro creado
  */
-export default function QuickCreatePartyDialog({ kind, companyId, open, onOpenChange, onCreated }) {
+export default function QuickCreatePartyDialog({ kind, companyId, open, onOpenChange, onCreated, initialValues = {} }) {
   const esCliente = kind === 'client'
   const createClient = useCreateClient()
   const createProvider = useCreateProvider()
@@ -54,7 +54,7 @@ export default function QuickCreatePartyDialog({ kind, companyId, open, onOpenCh
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(esCliente ? clientSchema : providerSchema),
-    defaultValues: { ...EMPTY, tax_condition: 'RI' },
+    defaultValues: { ...EMPTY, ...initialValues },
   })
 
   const mutation = esCliente ? createClient : createProvider
@@ -101,7 +101,7 @@ export default function QuickCreatePartyDialog({ kind, companyId, open, onOpenCh
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        <form onSubmit={(event) => { event.stopPropagation(); handleSubmit(onSubmit)(event) }} className="space-y-3">
           <div className="space-y-1.5">
             <Label>Nombre o razón social <span className="text-red-500">*</span></Label>
             <Input placeholder={esCliente ? 'Cliente Demo S.R.L.' : 'Proveedor Demo S.R.L.'} {...register('name')} />
@@ -117,6 +117,7 @@ export default function QuickCreatePartyDialog({ kind, companyId, open, onOpenCh
             <div className="space-y-1.5">
               <Label>Condición fiscal</Label>
               <select className={SELECT_CLASS} {...register('tax_condition')}>
+                <option value="" disabled>Seleccionar condición fiscal</option>
                 {COMPANY_TAX_CONDITIONS.map(({ value, label }) => (
                   <option key={value} value={value}>{label}</option>
                 ))}

@@ -15,6 +15,7 @@ export function emissionBlockReason(invoice, companyId) {
   }
   const config = getComprobanteConfig(invoice.tipo_comprobante)
   if (!config.esFactura || config.esExportacion) return 'Tipo no disponible para envío en lote'
+  if (!invoice.client_id) return 'Creá o seleccioná un cliente antes de solicitar el CAE'
   try {
     if (sessionStorage.getItem(requestKey(companyId, invoice.id)) === 'requested') {
       return 'CAE ya solicitado: revisá el resultado anterior'

@@ -415,19 +415,21 @@ export function parseGpt4Response(rawText) {
   // Extraer bloque VENDEDOR
   const vendedorBlock = text.match(/VENDEDOR:\s*([\s\S]*?)(?=COMPRADOR:|$)/i)?.[1] ?? ''
   const getFromBlock = (block, label) => {
-    const m = block.match(new RegExp(`${label}:\\s*(.+)`, 'i'))
+    const m = block.match(new RegExp(`^${label}:[\\t ]*([^\\r\\n]*)`, 'im'))
     return m?.[1]?.trim() || null
   }
 
   const seller_name    = getFromBlock(vendedorBlock, 'RAZON_SOCIAL')
   const seller_cuit    = normalizeCuit(getFromBlock(vendedorBlock, 'CUIT'))
   const seller_address = getFromBlock(vendedorBlock, 'DOMICILIO')
+  const seller_tax_condition = getFromBlock(vendedorBlock, 'CONDICION_IVA')
 
   // Extraer bloque COMPRADOR
   const compradorBlock = text.match(/COMPRADOR:\s*([\s\S]*?)(?=ITEMS:|NETO_GRAVADO:|$)/i)?.[1] ?? ''
   const buyer_name    = getFromBlock(compradorBlock, 'RAZON_SOCIAL')
   const buyer_cuit    = normalizeCuit(getFromBlock(compradorBlock, 'CUIT'))
   const buyer_address = getFromBlock(compradorBlock, 'DOMICILIO')
+  const buyer_tax_condition = getFromBlock(compradorBlock, 'CONDICION_IVA')
 
   // Extraer ítems del bloque ITEMS
   const itemsBlock = text.match(/ITEMS:\s*([\s\S]*?)(?=NETO_GRAVADO:|$)/i)?.[1] ?? ''
@@ -482,6 +484,8 @@ export function parseGpt4Response(rawText) {
     total_iva,
     total_amount,
     items,
+    seller_tax_condition,
+    buyer_tax_condition,
     confidence: {
       invoice_number: s(invoice_number),
       invoice_type:   s(invoice_type),

@@ -18,6 +18,7 @@ vi.mock('@/features/invoices/components/QuickCreatePartyDialog', () => ({ defaul
 const invoiceId = '11111111-1111-4111-8111-111111111111'
 const company = { id: '22222222-2222-4222-8222-222222222222', tax_condition: 'RI' }
 const defaultValues = {
+  client_id: '44444444-4444-4444-8444-444444444444',
   type: 'receivable', tipo_comprobante: 'Factura B', punto_de_venta: 1, numero_comprobante: 1,
   fecha_emision: '2026-10-19', fecha_vencimiento: '2026-11-01', condicion_pago: 'contado', moneda: 'ARS', tipo_cambio: 1,
   emisor_cuit: '20-11111111-2', emisor_razon_social: 'Empresa', emisor_condicion_iva: 'RI', emisor_domicilio: 'Calle 123',
@@ -38,6 +39,14 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('solicitar CAE una sola vez desde el formulario', () => {
+  it('no permite pedir CAE con datos escritos pero sin cliente creado y vinculado', () => {
+    form({ ...defaultValues, client_id: null, receptor_razon_social: 'Cliente escrito' })
+    const button = screen.getByRole('button', { name: /Solicitar CAE en ARCA/ })
+    expect(button.disabled).toBe(true)
+    fireEvent.click(button)
+    expect(mutateAsync).not.toHaveBeenCalled()
+    expect(sessionStorage.length).toBe(0)
+  })
   it('bloquea el segundo clic mientras espera la respuesta y envía la identidad estable', async () => {
     mutateAsync.mockReturnValue(new Promise(() => {}))
     form()

@@ -74,7 +74,7 @@ function mapOcrToFormValues(ocr, company) {
     // Emisor: el proveedor que emitió el comprobante escaneado
     emisor_cuit: ocr.seller_cuit ?? '',
     emisor_razon_social: ocr.seller_name ?? '',
-    emisor_condicion_iva: 'RI',
+    emisor_condicion_iva: ocr.seller_tax_condition ?? '',
     emisor_domicilio: ocr.seller_address ?? '',
     receptor_id_impositivo: null,
     // Totales

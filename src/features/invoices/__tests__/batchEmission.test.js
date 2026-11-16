@@ -10,6 +10,7 @@ vi.mock('@/lib/supabase', () => ({ supabase: { from: () => ({ update }) } }))
 
 const invoice = (id, fields = {}) => ({
   id, company_id: 'company-a', type: 'receivable', tipo_comprobante: 'Factura B',
+  client_id: 'client-a',
   status: 'pending', invoice_number: `draft-${id}`, punto_de_venta: 2,
   invoice_items: [{ description: 'Producto', quantity: 1, unit_price: 100, alicuota_iva: 21 }],
   ...fields,
@@ -59,7 +60,7 @@ describe('envío de varias facturas guardadas a ARCA', () => {
   })
 
   it.each([
-    { type: 'payable' }, { status: 'cancelled' }, { cae: '70000000000001' },
+    { type: 'payable' }, { client_id: null }, { status: 'cancelled' }, { cae: '70000000000001' },
     { afip_status: 'issued' }, { tipo_comprobante: 'Presupuesto' }, { company_id: 'company-b' },
   ])('no envía comprobantes incompatibles o de otra empresa: %o', async (fields) => {
     getById.mockResolvedValue(invoice('a', fields))

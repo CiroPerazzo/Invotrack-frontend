@@ -58,14 +58,22 @@ export default function InvoiceForm({
   defaultValues,
   onSubmit,
   isLoading,
-  clients = [],
-  providers = [],
+  clients: initialClients = [],
+  providers: initialProviders = [],
   company = null,
   onFlowChange,
   lockFlow = false,
   lockedProviderId = null,
 }) {
   const navigate = useNavigate()
+  // El alta puede quedar fuera de la página actual del catálogo; conservarla
+  // como opción evita que el selector borre el vínculo recién creado.
+  const [createdContacts, setCreatedContacts] = useState([])
+  const withCreated = (list, kind) => [...list, ...createdContacts
+    .filter((entry) => entry.kind === kind && entry.companyId === company?.id && !list.some((item) => item.id === entry.record.id))
+    .map((entry) => entry.record)]
+  const clients = withCreated(initialClients, 'client')
+  const providers = withCreated(initialProviders, 'provider')
 
   const {
     register, handleSubmit, control, watch, getValues, setValue, setError,
@@ -98,6 +106,7 @@ export default function InvoiceForm({
 
   // Alta rápida de la contraparte (cliente o proveedor) desde la propia factura.
   const [quickCreateOpen, setQuickCreateOpen] = useState(false)
+  const [quickCreateValues, setQuickCreateValues] = useState({})
 
   const items               = watch('items') ?? []
   const moneda              = watch('moneda') ?? 'ARS'
@@ -105,6 +114,7 @@ export default function InvoiceForm({
   const invoiceType         = watch('type') ?? 'receivable'
   const esEmitida           = isReceivable(invoiceType)
   const esRecibida          = invoiceType === FLOW_PAYABLE
+  const selectedPartyId     = watch(esRecibida ? 'provider_id' : 'client_id')
   const esAnonimo           = watch('consumidor_final_anonimo') ?? false
 
   const flow = getFlowOption(invoiceType)
@@ -164,6 +174,9 @@ export default function InvoiceForm({
    * esté en la lista (recién creado, la caché todavía no lo tiene).
    */
   const handleContactSelect = (kind, contactId, contacto = null) => {
+    // Radix puede emitir un valor vacío al actualizar sus opciones nativas.
+    // El cambio de flujo limpia el vínculo explícitamente.
+    if (!contactId) return
     const esCliente = kind === 'client'
     const list = esCliente ? clients : providers
 
@@ -319,14 +332,45 @@ export default function InvoiceForm({
   /** Alta rápida: el registro creado se selecciona y completa los campos. */
   const handleQuickCreated = (record) => {
     if (!record?.id) return
+    setCreatedContacts((contacts) => [...contacts, { kind: contraparteKind, companyId: company?.id, record }])
     handleContactSelect(contraparteKind, record.id, record)
   }
+
+  const openQuickCreate = () => {
+    const values = getValues()
+    const role = counterpartyRole(invoiceType)
+    const cuit = String(values[`${role}_cuit`] ?? '').trim()
+    setQuickCreateValues({
+      name: values[`${role}_razon_social`] ?? '',
+      cuit: /^\d{11}$/.test(cuit) ? cuit.replace(/^(\d{2})(\d{8})(\d)$/, '$1-$2-$3') : cuit,
+      tax_condition: values[`${role}_condicion_iva`] || '',
+      address: values[`${role}_domicilio`] ?? '',
+    })
+    setQuickCreateOpen(true)
+  }
+
+  const createPartyButton = (
+    <div className="sm:col-span-2">
+      <Button type="button" variant="outline" size="sm" onClick={openQuickCreate}
+        disabled={!company?.id || Boolean(selectedPartyId) || isLoading || emitCae.isPending}>
+        <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+        {selectedPartyId ? `${esRecibida ? 'Proveedor' : 'Cliente'} vinculado` : `Crear ${flow?.counterpartyNoun} con estos datos`}
+      </Button>
+      <p className="text-xs text-gray-400 mt-1">
+        Revisá los datos antes de guardar. Queda vinculado a esta factura.
+      </p>
+    </div>
+  )
 
   // Solicita el CAE a ARCA (WSFEv1 homologación) y completa los campos.
   // Solo aplica a comprobantes que requieren CAE emitidos (flujo "cobrar").
   const handleEmitCae = async () => {
     const values = getValues()
     if (caeRequestedRef.current || String(values.cae ?? '').trim() || emitCae.isPending || isLoading) return
+    if (!values.client_id) {
+      toast({ title: 'Falta seleccionar un cliente', description: 'Creá o seleccioná un cliente antes de solicitar el CAE.', variant: 'error' })
+      return
+    }
     if (!invoiceId || !company?.id) {
       toast({ title: 'Faltan datos de la factura', description: 'Seleccioná una empresa antes de solicitar el CAE.', variant: 'error' })
       return
@@ -513,7 +557,7 @@ export default function InvoiceForm({
                 type="button"
                 variant="outline"
                 className="w-full"
-                disabled={hasCae || caeRequested || emitCae.isPending || isLoading}
+                disabled={!selectedPartyId || hasCae || caeRequested || emitCae.isPending || isLoading}
                 onClick={handleEmitCae}
               >
                 {emitCae.isPending
@@ -525,7 +569,7 @@ export default function InvoiceForm({
                   : 'Solicitar CAE en ARCA (homologación)'}
               </Button>
               <p className="text-xs text-gray-400">
-                {caeRequested && !hasCae
+                {!selectedPartyId ? 'Creá o seleccioná un cliente antes de solicitar el CAE.' : caeRequested && !hasCae
                   ? 'Ya se intentó solicitar el CAE. Revisá el resultado antes de continuar; no se puede volver a solicitar.'
                   : 'El CAE solo se puede solicitar una vez por factura.'}
               </p>
@@ -610,7 +654,7 @@ export default function InvoiceForm({
                   <Controller name="provider_id" control={control} render={({ field }) => (
                     <Select
                       disabled={Boolean(lockedProviderId)}
-                      onValueChange={(id) => { field.onChange(id); handleContactSelect('provider', id) }}
+                      onValueChange={(id) => handleContactSelect('provider', id)}
                       value={field.value ?? ''}
                     >
                       <SelectTrigger>
@@ -668,6 +712,7 @@ export default function InvoiceForm({
                 <Input placeholder="Av. Córdoba 1234, CABA" {...register('emisor_domicilio')} />
                 {errors.emisor_domicilio && <p className="text-xs text-red-500">{errors.emisor_domicilio.message}</p>}
               </div>
+              {createPartyButton}
             </div>
           )}
         </CardContent>
@@ -716,7 +761,7 @@ export default function InvoiceForm({
             {esRecibida && <CompanyPartyPanel company={company} role="receptor" />}
 
             {/* El receptor es un cliente de la lista — al seleccionarlo se completan sus datos */}
-            {!esRecibida && !config.esExportacion && (
+            {!esRecibida && (
               <div className="sm:col-span-2 space-y-1.5">
                 <Label>
                   Cliente (receptor)
@@ -724,7 +769,7 @@ export default function InvoiceForm({
                 </Label>
                 <Controller name="client_id" control={control} render={({ field }) => (
                   <Select
-                    onValueChange={(clientId) => { field.onChange(clientId); handleContactSelect('client', clientId) }}
+                    onValueChange={(clientId) => handleContactSelect('client', clientId)}
                     value={field.value ?? ''}
                   >
                     <SelectTrigger>
@@ -748,22 +793,6 @@ export default function InvoiceForm({
                 </p>
               </div>
             )}
-
-            {/* Alta rápida de la contraparte — siempre disponible */}
-            <div className="sm:col-span-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setQuickCreateOpen(true)}
-              >
-                <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-                Crear {flow?.counterpartyNoun}
-              </Button>
-              <p className="text-xs text-gray-400 mt-1">
-                Se guarda con sus datos fiscales y queda vinculado a esta factura.
-              </p>
-            </div>
 
             {esEmitida && config.permiteConsumidorFinalAnonimo && !superaUmbral && (
               <div className="sm:col-span-2 flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
@@ -814,6 +843,8 @@ export default function InvoiceForm({
                 </div>
               </>
             )}
+
+            {esEmitida && createPartyButton}
 
           </CardContent>
         </Card>
@@ -1001,13 +1032,14 @@ export default function InvoiceForm({
       </div>
 
       {/* Alta de la contraparte sin salir de la factura */}
-      <QuickCreatePartyDialog
+      {quickCreateOpen && <QuickCreatePartyDialog
         kind={contraparteKind}
+        initialValues={quickCreateValues}
         companyId={company?.id}
         open={quickCreateOpen}
         onOpenChange={setQuickCreateOpen}
         onCreated={handleQuickCreated}
-      />
+      />}
 
     </form>
   )

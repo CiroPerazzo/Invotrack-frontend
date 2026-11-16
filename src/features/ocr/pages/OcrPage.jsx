@@ -111,7 +111,7 @@ export default function OcrPage() {
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-blue-400/80">// captura inteligente</p>
         <h1 className="text-2xl font-bold text-gray-900 mt-1">Escanear factura</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          Subí una imagen y extraemos los datos automáticamente
+          Subí una imagen o PDF y extraemos los datos automáticamente
         </p>
       </div>
 
@@ -121,7 +121,7 @@ export default function OcrPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ScanLine className="h-4 w-4" /> Subir imagen
+                <ScanLine className="h-4 w-4" /> Subir imagen o PDF
               </CardTitle>
               <CardDescription>Factura, nota de crédito, débito, recibo o ticket</CardDescription>
             </CardHeader>
