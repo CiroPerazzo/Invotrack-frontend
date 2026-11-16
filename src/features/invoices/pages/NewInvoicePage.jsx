@@ -233,11 +233,11 @@ export default function NewInvoicePage() {
         notes: existingInvoice.notes ?? '',
         items: existingInvoice.invoice_items?.length
           ? existingInvoice.invoice_items.map((item) => ({
-              descripcion: item.descripcion ?? '',
-              cantidad: item.cantidad ?? 1,
+              descripcion: item.description ?? item.descripcion ?? '',
+              cantidad: item.quantity ?? item.cantidad ?? 1,
               unidad: item.unidad ?? '',
-              precio_unitario: item.precio_unitario ?? 0,
-              alicuota_iva: item.alicuota_iva ?? 21,
+              precio_unitario: item.unit_price ?? item.precio_unitario ?? 0,
+              alicuota_iva: item.alicuota_iva ?? item.iva_rate ?? 21,
             }))
           : [{ descripcion: '', cantidad: 1, unidad: '', precio_unitario: 0, alicuota_iva: 21 }],
       }

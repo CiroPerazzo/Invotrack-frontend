@@ -243,18 +243,25 @@ export const invoiceService = {
   },
 
   /**
-   * Update invoice fields (not items — handle separately).
+   * Update invoice fields and items atomically.
    * El RLS garantiza que solo miembros con rol admin/accountant pueden actualizar.
    * @param {string} id
    * @param {object} updates
    */
-  async update(id, updates) {
-    const { data, error } = await supabase
-      .from('invoices')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
+  async update(id, updates, companyId) {
+    if (!companyId) throw new Error('companyId requerido')
+    const { items, ...invoice } = updates
+    delete invoice.consumidor_final_anonimo
+    delete invoice.id
+    for (const field of ['fecha_vencimiento', 'cae_vencimiento', 'cae']) {
+      if (invoice[field] === '') invoice[field] = null
+    }
+    const { data, error } = await supabase.rpc('update_invoice_with_items', {
+      p_invoice_id: id,
+      p_company_id: companyId,
+      p_updates: invoice,
+      p_items: items ?? null,
+    })
 
     if (error) throw error
     return data

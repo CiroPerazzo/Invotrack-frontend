@@ -89,11 +89,12 @@ export function useCreateInvoice() {
  * Actualiza campos de una factura existente.
  */
 export function useUpdateInvoice() {
+  const { company } = useCompany()
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, ...data }) => invoiceService.update(id, data),
+    mutationFn: ({ id, ...data }) => invoiceService.update(id, data, company?.id),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES] })
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICE, id] })
